@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo — AI Chatbot{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>AI Chatbot</h2>
+ <div class="desc">Ask questions about server status, get recommendations, or request actions</div>
+</div>
+
+<div class="chat-container">
+ <div class="chat-messages" id="chatMessages">
+ <div class="chat-msg bot">
+ <div class="bubble">
+ Halo! Aku Trazezzo, AI assistant untuk server <strong>{{ overview.hostname }}</strong>.<br><br>
+ Kamu bisa tanya apapun tentang kondisi server, misalnya:<br>
+ • "Bagaimana kondisi server sekarang?"<br>
+ • "Service apa yang failed?"<br>
+ • "Kenapa CPU tinggi?"<br>
+ • "Apa yang terjadi dalam 30 menit terakhir?"
+ </div>
+ </div>
+ </div>
+ <div class="chat-input">
+ <input type="text" id="chatInput" placeholder="Tanya apa saja tentang servermu..." onkeypress="if(event.key==='Enter') sendChat()">
+ <button class="btn btn-primary" onclick="sendChat()">Kirim</button>
+ </div>
+</div>
+
+<script>
+let chatHistory = [];
+
+async function sendChat() {
+ const input = document.getElementById('chatInput');
+ const msg = input.value.trim();
+ if (!msg) return;
+ input.value = '';
+
+ // Add user message
+ addMessage(msg, 'user');
+ chatHistory.push({ role: 'user', content: msg });
+
+ // Create bot message placeholder
+ const botDiv = addMessage('', 'bot');
+ const bubble = botDiv.querySelector('.bubble');
+ bubble.innerHTML = '<span style="color: var(--text-muted);">⏳ Mengetik...</span>';
+
+ try {
+ const resp = await fetch('/trazezzo/api/chat', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ body: JSON.stringify({ message: msg, mode: 'reasoning' }),
+ });
+
+ const reader = resp.body.getReader();
+ const decoder = new TextDecoder();
+ let fullText = '';
+ bubble.innerHTML = '';
+
+ while (true) {
+ const { done, value } = await reader.read();
+ if (done) break;
+ const text = decoder.decode(value);
+ const lines = text.split('\n');
+ for (const line of lines) {
+ if (line.startsWith('data: ')) {
+ const data = line.slice(6);
+ if (data === '[DONE]') break;
+ try {
+ const parsed = JSON.parse(data);
+ if (parsed.chunk) {
+ fullText += parsed.chunk;
+ bubble.innerHTML = fullText;
+ document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+ }
+ if (parsed.error) {
+ bubble.innerHTML = 'Error: ' + parsed.error;
+ }
+ } catch (e) {}
+ }
+ }
+ }
+ chatHistory.push({ role: 'assistant', content: fullText });
+ } catch (e) {
+ bubble.innerHTML = 'Error: ' + e.message;
+ }
+}
+
+function addMessage(text, sender) {
+ const container = document.getElementById('chatMessages');
+ const div = document.createElement('div');
+ div.className = `chat-msg ${sender}`;
+ div.innerHTML = `<div class="bubble">${text || '...'}</div>`;
+ container.appendChild(div);
+ container.scrollTop = container.scrollHeight;
+ return div;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo — Processes{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>Process Manager</h2>
+ <div class="desc">Running processes — sorted by CPU usage</div>
+</div>
+
+<div class="card">
+ <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+  <div class="card-title" style="margin: 0;">Active Processes ({{ processes|length }})</div>
+  <div style="display: flex; gap: 8px;">
+   <select id="sortBy" onchange="loadProcesses()" style="padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem;">
+    <option value="cpu" selected>Sort: CPU</option>
+    <option value="mem">Sort: Memory</option>
+    <option value="pid">Sort: PID</option>
+   </select>
+   <button class="btn btn-sm btn-primary" onclick="loadProcesses()">Refresh</button>
+  </div>
+ </div>
+ <div style="overflow-x: auto;">
+  <table style="width: 100%; font-size: 0.82rem;">
+   <thead><tr>
+    <th style="text-align: left; padding: 6px 8px;">PID</th>
+    <th style="text-align: left; padding: 6px 8px;">Name</th>
+    <th style="text-align: left; padding: 6px 8px;">User</th>
+    <th style="text-align: right; padding: 6px 8px;">CPU%</th>
+    <th style="text-align: right; padding: 6px 8px;">MEM%</th>
+    <th style="text-align: right; padding: 6px 8px;">MEM (MB)</th>
+    <th style="text-align: left; padding: 6px 8px;">Status</th>
+    <th style="text-align: left; padding: 6px 8px;">Started</th>
+    <th style="text-align: center; padding: 6px 8px;">Action</th>
+   </tr></thead>
+   <tbody id="procTableBody">
+    {% for p in processes %}
+    <tr style="border-bottom: 1px solid var(--border);">
+     <td style="padding: 4px 8px; font-family: var(--font-mono);">{{ p.pid }}</td>
+     <td style="padding: 4px 8px;" title="{{ p.cmd }}"><strong>{{ p.name }}</strong></td>
+     <td style="padding: 4px 8px;">{{ p.user }}</td>
+     <td style="padding: 4px 8px; text-align: right; color: {% if p.cpu > 80 %}var(--error){% elif p.cpu > 50 %}var(--warning){% else %}var(--text){% endif %};">{{ p.cpu }}</td>
+     <td style="padding: 4px 8px; text-align: right; color: {% if p.mem > 80 %}var(--error){% elif p.mem > 50 %}var(--warning){% else %}var(--text){% endif %};">{{ p.mem }}</td>
+     <td style="padding: 4px 8px; text-align: right;">{{ p.mem_mb }}</td>
+     <td style="padding: 4px 8px;"><span class="badge {% if p.status == 'running' %}active{% elif p.status == 'sleeping' %}inactive{% else %}{% endif %}">{{ p.status }}</span></td>
+     <td style="padding: 4px 8px;">{{ p.started }}</td>
+     <td style="padding: 4px 8px; text-align: center;">
+      <button class="btn btn-sm" style="color: var(--error); padding: 2px 8px;" onclick="killProcess({{ p.pid }}, 'TERM')" title="Terminate">TERM</button>
+      <button class="btn btn-sm" style="color: var(--error); padding: 2px 8px;" onclick="killProcess({{ p.pid }}, 'KILL')" title="Force Kill">KILL</button>
+     </td>
+    </tr>
+    {% endfor %}
+   </tbody>
+  </table>
+ </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+function loadProcesses() {
+ const sortBy = document.getElementById('sortBy').value;
+ fetch(`/trazezzo/api/processes?sort_by=${sortBy}&limit=100`)
+ .then(r => r.json())
+ .then(procs => {
+  const tbody = document.getElementById('procTableBody');
+  tbody.innerHTML = procs.map(p => `
+   <tr style="border-bottom: 1px solid var(--border);">
+    <td style="padding: 4px 8px; font-family: var(--font-mono);">${p.pid}</td>
+    <td style="padding: 4px 8px;" title="${p.cmd}"><strong>${p.name}</strong></td>
+    <td style="padding: 4px 8px;">${p.user}</td>
+    <td style="padding: 4px 8px; text-align: right; color: ${p.cpu > 80 ? 'var(--error)' : p.cpu > 50 ? 'var(--warning)' : 'var(--text)'};">${p.cpu}</td>
+    <td style="padding: 4px 8px; text-align: right; color: ${p.mem > 80 ? 'var(--error)' : p.mem > 50 ? 'var(--warning)' : 'var(--text)'};">${p.mem}</td>
+    <td style="padding: 4px 8px; text-align: right;">${p.mem_mb}</td>
+    <td style="padding: 4px 8px;"><span class="badge ${p.status === 'running' ? 'active' : 'inactive'}">${p.status}</span></td>
+    <td style="padding: 4px 8px;">${p.started}</td>
+    <td style="padding: 4px 8px; text-align: center;">
+     <button class="btn btn-sm" style="color: var(--error); padding: 2px 8px;" onclick="killProcess(${p.pid}, 'TERM')">TERM</button>
+     <button class="btn btn-sm" style="color: var(--error); padding: 2px 8px;" onclick="killProcess(${p.pid}, 'KILL')">KILL</button>
+    </td>
+   </tr>
+  `).join('');
+ })
+ .catch(() => {});
+}
+
+function killProcess(pid, signal) {
+ if (!confirm(`Send ${signal} to PID ${pid}?`)) return;
+ fetch(`/trazezzo/api/processes/${pid}/kill?signal=${signal}`, { method: 'POST' })
+ .then(r => r.json())
+ .then(data => {
+  if (data.success) {
+   alert(`Sent ${signal} to ${data.name} (PID ${pid})`);
+   loadProcesses();
+  } else {
+   alert(`Failed: ${data.error}`);
+  }
+ });
+}
+
+setInterval(loadProcesses, 5000);
+</script>
+{% endblock %}

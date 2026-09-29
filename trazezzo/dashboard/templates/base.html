@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Trazezzo{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f1f5f9;
+            --surface: #ffffff;
+            --surface-hover: #f8fafc;
+            --primary: #06a284;
+            --primary-hover: #048566;
+            --primary-light: #e6f7f3;
+            --ink: #0f172a;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --text-light: #94a3b8;
+            --border: #e2e8f0;
+            --border-light: #f1f5f9;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --sidebar-w: 232px;
+            --chat-w: 380px;
+            --radius: 10px;
+            --radius-sm: 6px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,.04);
+            --shadow: 0 2px 8px rgba(0,0,0,.06);
+            --font-display: 'Space Grotesk', system-ui, sans-serif;
+            --font-body: 'Inter', system-ui, sans-serif;
+            --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* ── Sidebar ──────────────────────────── */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            z-index: 200;
+            transition: width 0.22s ease;
+            white-space: nowrap;
+        }
+        .sidebar.collapsed { width: 56px !important; }
+        body.sidebar-collapsed { --sidebar-w: 56px; }
+        /* Collapsed header: just logo centered */
+        .sidebar.collapsed .sidebar-header { justify-content: center; padding: 16px 0; }
+        .sidebar.collapsed .sidebar-header h1,
+        .sidebar.collapsed .sidebar-header .subtitle,
+        .sidebar.collapsed .sidebar-header > div { display: none; }
+        .sidebar.collapsed .logo-mark { width: 30px; height: 30px; }
+        /* Move toggle to bottom */
+        .sidebar.collapsed .sidebar-header > button { display: none; }
+        .sidebar.collapsed .sidebar-nav { padding: 4px 0 48px; }
+        /* Nav items: icon only, clean spacing */
+        .sidebar.collapsed .nav-section { display: none; }
+        .sidebar.collapsed .nav-item { padding: 9px 0; justify-content: center; font-size: 0; gap: 0; }
+        .sidebar.collapsed .nav-item .icon { margin: 0 auto; width: 20px; height: 20px; }
+        .sidebar.collapsed .nav-item .icon svg { width: 18px; height: 18px; }
+        .sidebar.collapsed .nav-item.active::before { left: 0; }
+        /* Toggle button at bottom of collapsed sidebar */
+        .sidebar-collapsed-toggle { display: none; }
+        .sidebar.collapsed .sidebar-collapsed-toggle {
+            display: flex; align-items: center; justify-content: center;
+            padding: 12px 0; border-top: 1px solid var(--border);
+            cursor: pointer; color: var(--text-muted);
+            transition: color 0.15s;
+        }
+        .sidebar.collapsed .sidebar-collapsed-toggle:hover { color: var(--primary); }
+        .sidebar-header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sidebar-header .logo-mark {
+            width: 28px; height: 28px; flex-shrink: 0;
+        }
+        .sidebar-header h1 {
+            font-family: var(--font-display);
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--ink);
+            letter-spacing: -.02em;
+            line-height: 1;
+        }
+        .sidebar-header .subtitle {
+            font-size: 0.65rem;
+            color: var(--text-light);
+            margin-top: 3px;
+            font-family: var(--font-mono);
+            letter-spacing: .02em;
+        }
+        .sidebar-nav { flex: 1; padding: 8px 0; overflow-y: auto; }
+        .nav-section {
+            padding: 16px 20px 4px;
+            font-size: 0.62rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-light);
+            letter-spacing: 0.08em;
+            font-family: var(--font-mono);
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 20px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.83rem;
+            font-weight: 500;
+            transition: all 0.12s;
+            position: relative;
+        }
+        .nav-item:hover { background: var(--surface-hover); color: var(--primary); }
+        .nav-item.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+        .nav-item.active::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--primary); border-radius: 0 2px 2px 0; }
+        .nav-item .icon { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .nav-item .icon svg { width: 16px; height: 16px; }
+
+        /* ── Top bar ─────────────────────────── */
+        .topbar {
+            position: fixed;
+            top: 0; left: var(--sidebar-w); right: var(--chat-w);
+            height: 48px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 100;
+        }
+        .topbar .breadcrumb-top { font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; font-weight: 500; }
+        .topbar .breadcrumb-top .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 3px rgba(34,197,94,.15); }
+        .topbar .actions { display: flex; gap: 8px; align-items: center; }
+        .topbar-btn {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: var(--text);
+            transition: all 0.15s;
+        }
+        .topbar-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .topbar-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .proactive-indicator { display: flex; align-items: center; gap: 6px; font-size: 0.74rem; color: var(--text-muted); font-weight: 500; }
+        .proactive-indicator .mode-pill { padding: 3px 10px; border-radius: 99px; font-size: 0.7rem; font-weight: 600; font-family: var(--font-mono); }
+
+        /* ── Execution panel ─────────────────── */
+        .exec-panel {
+            position: fixed;
+            right: var(--chat-w);
+            top: 48px;
+            bottom: 0;
+            width: 0;
+            background: #0f172a;
+            border-left: 1px solid #1e293b;
+            z-index: 150;
+            transition: width 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .exec-panel.open { width: 400px; box-shadow: -8px 0 24px rgba(0,0,0,0.15); }
+        .exec-panel-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 14px;
+            background: #1e293b;
+            border-bottom: 1px solid #334155;
+        }
+        .exec-panel-header .label { color: #e2e8f0; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .exec-panel-header .ctrl-btn {
+            width: 26px; height: 26px; border: none; border-radius: var(--radius-sm);
+            background: #334155; color: #e2e8f0; cursor: pointer; font-size: 0.8rem;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.15s;
+        }
+        .exec-panel-header .ctrl-btn:hover { background: #475569; }
+        .exec-panel-body { flex: 1; overflow-y: auto; padding: 12px; }
+        .exec-item {
+            margin-bottom: 8px; border-radius: var(--radius-sm); overflow: hidden;
+            border: 1px solid #334155;
+        }
+        .exec-item .cmd-header {
+            padding: 8px 12px; background: #1e293b; display: flex; align-items: center; gap: 8px;
+            font-family: var(--font-mono); font-size: 0.75rem; color: #e2e8f0;
+        }
+        .exec-item .cmd-header .status-icon { font-size: 0.85rem; }
+        .exec-item .cmd-header .source { margin-left: auto; font-size: 0.65rem; color: #64748b; font-family: var(--font-mono); }
+        .exec-item .cmd-output {
+            padding: 8px 12px; background: #0b1120;
+            font-family: var(--font-mono); font-size: 0.74rem; color: #94a3b8;
+            white-space: pre-wrap; max-height: 200px; overflow-y: auto;
+        }
+        .exec-item.running .cmd-header { border-left: 3px solid var(--warning); }
+        .exec-item.success .cmd-header { border-left: 3px solid var(--success); }
+        .exec-item.failed .cmd-header { border-left: 3px solid var(--error); }
+
+        /* ── Recommendations ──────────────────── */
+        .rec-panel {
+            border-bottom: 1px solid var(--border);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .rec-header {
+            padding: 10px 14px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            font-family: var(--font-mono);
+        }
+        .rec-header:hover { background: var(--surface-hover); }
+        .rec-header .badge-count {
+            background: var(--warning); color: #fff;
+            padding: 2px 8px; border-radius: 99px; font-size: 0.66rem; font-weight: 700;
+        }
+        .rec-header .badge-count.zero { background: var(--success); }
+        .rec-list { padding: 0 10px 10px; }
+        .rec-item {
+            padding: 8px 10px; margin-bottom: 4px; border-radius: var(--radius-sm);
+            font-size: 0.78rem; line-height: 1.4;
+            display: flex; gap: 8px; align-items: start;
+        }
+        .rec-item.warning { background: #fef3c7; color: #92400e; }
+        .rec-item.error { background: #fee2e2; color: #991b1b; }
+        .rec-item.info { background: #eff6ff; color: #1e40af; }
+        .rec-item.success { background: #dcfce7; color: #166534; }
+        .rec-item .icon { font-size: 0.85rem; flex-shrink: 0; }
+        .rec-item .text { flex: 1; }
+        .rec-item .action-btn {
+            font-size: 0.68rem; padding: 3px 10px; border-radius: var(--radius-sm);
+            border: 1px solid var(--border); background: var(--surface);
+            cursor: pointer; white-space: nowrap; flex-shrink: 0; font-weight: 600;
+            transition: all 0.12s;
+        }
+        .rec-item .action-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+        /* ── Main ─────────────────────────────── */
+        .main {
+            margin-left: var(--sidebar-w);
+            margin-right: var(--chat-w);
+            margin-top: 48px;
+            flex: 1;
+            padding: 24px 28px;
+            min-width: 0;
+        }
+        .page-header { margin-bottom: 24px; }
+        .page-header h2 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; color: var(--ink); letter-spacing: -.02em; margin-bottom: 4px; }
+        .page-header .desc { color: var(--text-muted); font-size: 0.84rem; }
+
+        /* ── Cards ────────────────────────────── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px;
+            margin-bottom: 14px;
+            box-shadow: var(--shadow-sm);
+        }
+        .card-title {
+            font-size: 0.74rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 12px;
+            font-family: var(--font-mono);
+        }
+        .grid { display: grid; gap: 14px; }
+        .grid-2 { grid-template-columns: 1fr 1fr; }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+        /* ── Stat cards ───────────────────────── */
+        .stat { text-align: center; }
+        .stat .value { font-family: var(--font-display); font-size: 1.7rem; font-weight: 700; letter-spacing: -.02em; }
+        .stat .label { font-size: 0.74rem; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
+        .stat .value.good { color: var(--success); }
+        .stat .value.warn { color: var(--warning); }
+        .stat .value.bad { color: var(--error); }
+
+        /* ── Tables ───────────────────────────── */
+        table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border); color: var(--text-muted); font-weight: 600; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em; }
+        td { padding: 8px 12px; border-bottom: 1px solid var(--border-light); }
+        tr:hover { background: var(--surface-hover); }
+
+        /* ── Badges ───────────────────────────── */
+        .badge { padding: 3px 10px; border-radius: 99px; font-size: 0.7rem; font-weight: 600; font-family: var(--font-mono); }
+        .badge.active { background: #dcfce7; color: #166534; }
+        .badge.failed { background: #fee2e2; color: #991b1b; }
+        .badge.inactive { background: #f1f5f9; color: #64748b; }
+        .badge.warn { background: #fef3c7; color: #92400e; }
+
+        /* ── Buttons ──────────────────────────── */
+        .btn {
+            padding: 7px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 600;
+            transition: all 0.15s;
+            color: var(--text);
+        }
+        .btn:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-primary { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); color: white; }
+        .btn-sm { padding: 4px 10px; font-size: 0.76rem; }
+        .btn-danger { color: var(--error); border-color: var(--error); }
+        .btn-danger:hover { background: var(--error); color: white; }
+
+        /* ── Progress bars ────────────────────── */
+        .progress-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 6px; }
+        .progress-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+        .progress-fill.good { background: var(--success); }
+        .progress-fill.warn { background: var(--warning); }
+        .progress-fill.bad { background: var(--error); }
+
+        /* ── Chat panel ───────────────────────── */
+        .chat-panel {
+            width: var(--chat-w);
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            position: fixed;
+            right: 0; top: 0; bottom: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            z-index: 200;
+            transition: width 0.25s ease;
+        }
+        .chat-panel.expanded { width: calc(100vw - var(--sidebar-w)); box-shadow: -8px 0 24px rgba(0,0,0,0.08); }
+        .chat-panel.expanded .chat-msg { max-width: 95%; }
+        .chat-panel.expanded .chat-msg .bubble { font-size: 0.9rem; }
+        .chat-expand-btn {
+            width: 28px; height: 28px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+            background: var(--surface); cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+            color: var(--text-muted);
+        }
+        .chat-expand-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .chat-expand-btn svg { transition: transform 0.25s ease; }
+        .chat-panel.expanded .chat-expand-btn svg { transform: rotate(180deg); }
+        .chat-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: space-between;
+        }
+        .chat-header .title { font-family: var(--font-display); font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 8px; color: var(--ink); }
+        .chat-header .mode-toggle {
+            display: flex; align-items: center; gap: 2px;
+            background: var(--bg); border-radius: 99px; padding: 3px;
+        }
+        .mode-btn {
+            padding: 4px 12px; border-radius: 99px; border: none;
+            font-size: 0.72rem; cursor: pointer; background: transparent; color: var(--text-muted);
+            transition: all 0.15s; font-weight: 600;
+        }
+        .mode-btn.active { background: var(--primary); color: white; }
+        .mode-btn.active.warn { background: var(--error); }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 14px; }
+        .chat-msg { margin-bottom: 10px; max-width: 90%; }
+        .chat-msg.user { margin-left: auto; }
+        .chat-msg .bubble { padding: 10px 14px; border-radius: 12px; font-size: 0.85rem; line-height: 1.5; }
+        .chat-msg.user .bubble { background: var(--primary); color: white; border-bottom-right-radius: 4px; }
+        .chat-msg.bot .bubble { background: var(--bg); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+        .chat-msg.bot .bubble pre { font-size: 0.78rem; background: #0f172a; color: #e2e8f0; padding: 10px; border-radius: var(--radius-sm); overflow-x: auto; margin: 4px 0; }
+        .chat-input { display: flex; gap: 6px; padding: 12px; border-top: 1px solid var(--border); }
+        .chat-input input { flex: 1; padding: 9px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.85rem; font-family: var(--font-body); transition: border-color 0.15s; }
+        .chat-input input:focus { outline: none; border-color: var(--primary); }
+        .image-preview { position: relative; padding: 6px; border-bottom: 1px solid var(--border); }
+        .image-preview img { max-width: 100%; max-height: 120px; border-radius: var(--radius-sm); display: block; }
+        .remove-img-btn { position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; border: none; border-radius: 50%; background: rgba(0,0,0,0.6); color: white; cursor: pointer; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; }
+        .chat-header-actions { display: flex; align-items: center; gap: 6px; }
+        .chat-clear-btn {
+            width: 28px; height: 28px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+            background: var(--surface); cursor: pointer; font-size: 0.78rem;
+            display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+        }
+        .chat-clear-btn:hover { border-color: var(--error); color: var(--error); }
+
+        /* ── Terminal ──────────────────────────── */
+        .terminal { background: #0f172a; color: #e2e8f0; padding: 16px; border-radius: var(--radius); font-family: var(--font-mono); font-size: 0.82rem; height: calc(100vh - 200px); overflow-y: auto; }
+        .terminal .line { white-space: pre-wrap; }
+
+        /* ── Activity feed ────────────────────── */
+        .activity-item { padding: 8px 0; border-bottom: 1px solid var(--border-light); display: flex; gap: 12px; align-items: start; }
+        .activity-item .time { font-size: 0.72rem; color: var(--text-light); white-space: nowrap; min-width: 55px; font-family: var(--font-mono); }
+        .activity-item .type { font-size: 0.72rem; font-weight: 600; min-width: 120px; }
+        .activity-item .actor-user { color: var(--primary); }
+        .activity-item .actor-agent { color: #8b5cf6; }
+        .activity-item .actor-system { color: var(--text-muted); }
+        .activity-item .msg { flex: 1; font-size: 0.82rem; }
+
+        /* ── Tabs ─────────────────────────────── */
+        .tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 18px; }
+        .tab { padding: 8px 18px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; font-size: 0.85rem; color: var(--text-muted); font-weight: 500; transition: all 0.15s; }
+        .tab:hover { color: var(--text); }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* ── File editor ──────────────────────── */
+        .editor-layout { display: grid; grid-template-columns: 260px 1fr; gap: 14px; height: calc(100vh - 160px); }
+        .file-tree { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow-y: auto; padding: 10px; }
+        .file-tree-item { padding: 4px 8px; cursor: pointer; border-radius: var(--radius-sm); font-size: 0.82rem; display: flex; align-items: center; gap: 6px; }
+        .file-tree-item:hover { background: var(--surface-hover); }
+        .file-tree-item.dir { font-weight: 600; }
+        .file-tree-item .icon { width: 16px; font-size: 0.9rem; }
+        .editor-pane { display: flex; flex-direction: column; gap: 8px; }
+        .editor-toolbar { display: flex; gap: 8px; align-items: center; }
+        .editor-toolbar .path { flex: 1; padding: 6px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 0.8rem; }
+        .editor-content { flex: 1; width: 100%; background: #0f172a; color: #e2e8f0; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; font-family: var(--font-mono); font-size: 0.82rem; resize: none; line-height: 1.5; }
+        .editor-content:focus { outline: none; border-color: var(--primary); }
+        .breadcrumb { font-size: 0.76rem; color: var(--text-muted); margin-bottom: 6px; }
+        .file-info { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; }
+
+        /* ── Scrollbar ────────────────────────── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* ── Responsive ───────────────────────── */
+        @media (max-width: 1200px) {
+            .chat-panel { width: 320px; }
+            .main { margin-right: 320px; }
+            :root { --chat-w: 320px; }
+        }
+        @media (max-width: 900px) {
+            .chat-panel { display: none; }
+            .main { margin-right: 0; }
+            .sidebar { display: none; }
+            .main { margin-left: 0; padding: 14px; }
+            .topbar { left: 0; }
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+            .editor-layout { grid-template-columns: 1fr; height: auto; }
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <svg class="logo-mark" viewBox="0 0 36 36" fill="none">
+                <rect width="36" height="36" rx="9" fill="#06a284"/>
+                <path d="M8 14 L14 14 L16 9 L18 19 L20 14 L28 14" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M18 19 L18 27" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+            </svg>
+            <div>
+                <h1>Trazezzo</h1>
+                <div class="subtitle">trace everything</div>
+            </div>
+            <button class="chat-expand-btn" id="sidebarToggle" onclick="toggleSidebar()" title="Minimize sidebar" style="margin-left:auto;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">Monitoring</div>
+            <a href="/trazezzo/" class="nav-item {% if active == 'overview' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span> Overview</a>
+            <a href="/trazezzo/services" class="nav-item {% if active == 'services' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Services</a>
+            <a href="/trazezzo/logs" class="nav-item {% if active == 'logs' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span> Logs</a>
+            <a href="/trazezzo/events" class="nav-item {% if active == 'events' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span> Events</a>
+
+            <div class="nav-section">System</div>
+            <a href="/trazezzo/networking" class="nav-item {% if active == 'networking' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span> Networking</a>
+            <a href="/trazezzo/storage" class="nav-item {% if active == 'storage' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span> Storage</a>
+            <a href="/trazezzo/containers" class="nav-item {% if active == 'containers' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg></span> Containers</a>
+            <a href="/trazezzo/accounts" class="nav-item {% if active == 'accounts' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span> Access</a>
+            <a href="/trazezzo/updates" class="nav-item {% if active == 'updates' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span> Updates</a>
+
+            <div class="nav-section">Security</div>
+            <a href="/trazezzo/security" class="nav-item {% if active == 'security' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span> Security</a>
+
+            <div class="nav-section">Tools</div>
+            <a href="/trazezzo/editor" class="nav-item {% if active == 'editor' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></span> File Editor</a>
+            <a href="/trazezzo/github" class="nav-item {% if active == 'github' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg></span> GitHub</a>
+            <a href="/trazezzo/sync" class="nav-item {% if active == 'sync' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span> Sync &amp; Archive</a>
+            <a href="/trazezzo/processes" class="nav-item {% if active == 'processes' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span> Processes</a>
+            <a href="/trazezzo/connections" class="nav-item {% if active == 'connections' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span> Connections</a>
+            <a href="/trazezzo/cron" class="nav-item {% if active == 'cron' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> Cron Jobs</a>
+            <a href="/trazezzo/certificates" class="nav-item {% if active == 'certificates' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span> SSL Certs</a>
+        </nav>
+        <div class="sidebar-collapsed-toggle" onclick="toggleSidebar()" title="Expand sidebar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+    </div>
+
+    <!-- Top bar -->
+    <div class="topbar">
+        <div class="breadcrumb-top">
+            <span class="status-dot"></span>
+            <span id="topbarHostname">Server</span>
+            <span style="color: var(--border);">/</span>
+            <span id="topbarPage">{% block topbar_title %}Overview{% endblock %}</span>
+        </div>
+        <div class="actions">
+            <div class="proactive-indicator">
+                <span class="mode-pill" id="topbarMode">Calm</span>
+            </div>
+            <button class="topbar-btn" id="execPanelBtn" onclick="toggleExecPanel()" style="display:none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <span id="execBadge" style="background:var(--warning); color:#1e1e1e; padding:1px 6px; border-radius:10px; font-size:0.68rem; font-weight:700;">0</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="main">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Execution panel -->
+    <div class="exec-panel" id="execPanel">
+        <div class="exec-panel-header">
+            <div class="label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Agent Execution</div>
+            <button class="ctrl-btn" onclick="toggleExecPanel()" title="Close">&times;</button>
+        </div>
+        <div class="exec-panel-body" id="execPanelBody">
+            <div style="color: #64748b; font-size: 0.8rem; text-align: center; padding: 20px;">No executions yet. Agent actions will appear here in real-time.</div>
+        </div>
+    </div>
+
+    <!-- Chat panel -->
+    <div class="chat-panel" id="chatPanel">
+        <div class="chat-header">
+            <div class="title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg> AI Assistant</div>
+            <div class="chat-header-actions">
+                <button class="chat-expand-btn" onclick="toggleChatExpand()" title="Expand chat"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/><polyline points="15 18 15 18 21 12"/></svg></button>
+                <button class="chat-clear-btn" onclick="clearChat()" title="Clear chat history"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                <div class="mode-toggle">
+                    <button class="mode-btn active" id="chatModeReasoning" onclick="setChatMode('reasoning')">Q&amp;A</button>
+                    <button class="mode-btn" id="chatModeAgent" onclick="setChatMode('agent')">Agent</button>
+                </div>
+                <div class="mode-toggle" style="margin-left: 6px;">
+                    <button class="mode-btn active" id="modeCalm" onclick="setProactiveMode('calm')">Calm</button>
+                    <button class="mode-btn" id="modeAggressive" onclick="setProactiveMode('aggressive')">Aggressive</button>
+                </div>
+            </div>
+        </div>
+        <!-- Auto recommendations -->
+        <div class="rec-panel">
+            <div class="rec-header" onclick="toggleRecPanel()">
+                <span>Auto Recommendations</span>
+                <span class="badge-count zero" id="recBadge">0</span>
+            </div>
+            <div class="rec-list" id="recList" style="display: none;">
+                <div style="color: var(--text-muted); font-size: 0.78rem; padding: 4px 8px;">Loading...</div>
+            </div>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input">
+            <div id="imagePreview" class="image-preview" style="display:none;">
+                <img id="previewImg" src="" alt="preview">
+                <button class="remove-img-btn" onclick="removeImage()">&times;</button>
+            </div>
+            <div class="chat-input-row">
+                <input type="text" id="chatInput" placeholder="Tanya servermu... (Ctrl+V untuk paste gambar)" onkeypress="if(event.key==='Enter') sendChat()">
+            </div>
+        </div>
+    </div>
+
+    {% block script %}{% endblock %}
+
+    <!-- Global chat + proactive mode + terminal + recommendations -->
+    <script>
+
+    let termWs = null;
+
+    // ── Proactive mode init ──────────────────────────────────
+    (async function initMode() {
+        try {
+            const resp = await fetch('/trazezzo/api/proactive/status');
+            const data = await resp.json();
+            updateModeUI(data.mode);
+        } catch(e) {}
+    })();
+
+    function updateModeUI(mode) {
+        const calm = document.getElementById('modeCalm');
+        const aggr = document.getElementById('modeAggressive');
+        const topMode = document.getElementById('topbarMode');
+        if (mode === 'aggressive') {
+            calm.classList.remove('active');
+            aggr.classList.add('active', 'warn');
+            if (topMode) topMode.textContent = 'Aggressive';
+        } else {
+            calm.classList.add('active');
+            aggr.classList.remove('active', 'warn');
+            if (topMode) topMode.textContent = 'Calm';
+        }
+    }
+
+    function setProactiveMode(mode) {
+        if (mode === 'aggressive' && !confirm('Switch to AGGRESSIVE mode?\n\nAgent akan propose auto-remediation commands yang butuh approval kamu sebelum dieksekusi:\n- Restart failed services\n- Kill OOM processes\n- Clean disk space\n- Renice high CPU processes\n\nLanjut?')) return;
+        fetch('/trazezzo/api/proactive/mode', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({mode}),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                updateModeUI(data.mode);
+                addMessage(`✅ Proactive mode: ${data.mode.toUpperCase()}. ${data.mode === 'aggressive' ? 'Approval required sebelum eksekusi.' : 'Advisory only.'}`, 'bot');
+                if (data.mode === 'aggressive') loadApprovals();
+            }
+        });
+    }
+
+    function setChatMode(mode) {
+        currentChatMode = mode;
+        const reasoning = document.getElementById('chatModeReasoning');
+        const agent = document.getElementById('chatModeAgent');
+        const input = document.getElementById('chatInput');
+        if (mode === 'agent') {
+            reasoning.classList.remove('active');
+            agent.classList.add('active');
+            input.placeholder = 'Agent mode: jelaskan masalah, aku akan eksekusi perbaikan...';
+        } else {
+            reasoning.classList.add('active');
+            agent.classList.remove('active');
+            input.placeholder = 'Tanya servermu... (Ctrl+V untuk paste gambar)';
+        }
+    }
+
+    // ── Pending approvals (aggressive mode) ──────────────────
+    async function loadApprovals() {
+        try {
+            const resp = await fetch('/trazezzo/api/approvals');
+            const data = await resp.json();
+            const pending = (data.approvals || []).filter(a => a.status === 'pending');
+            for (const a of pending) {
+                showApprovalInChat(a);
+            }
+        } catch(e) {}
+    }
+
+    function showApprovalInChat(approval) {
+        const container = document.getElementById('chatMessages');
+        const div = document.createElement('div');
+        div.className = 'chat-msg bot';
+        div.innerHTML = `<div class="bubble" style="border-left: 3px solid var(--warning);">
+            <div style="font-weight: 600; margin-bottom: 4px;">⏳ Approval Required</div>
+            <div style="font-family: monospace; font-size: 0.8rem; background: var(--bg); padding: 6px 8px; border-radius: 4px; margin-bottom 6px;">${escapeHtml(approval.cmd)}</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Reason: ${escapeHtml(approval.finding?.issue || 'Aggressive mode action')}</div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-sm btn-primary" onclick="approveAction('${approval.id}')">✓ Approve &amp; Execute</button>
+                <button class="btn btn-sm btn-danger" onclick="rejectAction('${approval.id}')">✕ Reject</button>
+            </div>
+        </div>`;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    async function approveAction(id) {
+        const resp = await fetch(`/trazezzo/api/approvals/${id}/approve`, {method: 'POST'});
+        const data = await resp.json();
+        if (data.success !== undefined) {
+            addMessage(`${data.success ? '✅' : '❌'} Executed: ${data.command || ''}\n${data.stdout || data.stderr || data.error || ''}`, 'bot');
+        } else {
+            addMessage('⚠ ' + (data.error || 'Failed'), 'bot');
+        }
+    }
+
+    async function rejectAction(id) {
+        const resp = await fetch(`/trazezzo/api/approvals/${id}/reject`, {method: 'POST'});
+        const data = await resp.json();
+        addMessage(data.success ? '🚫 Rejected.' : '⚠ ' + (data.error || 'Failed'), 'bot');
+    }
+
+    // ── Chat (with localStorage persistence) ──────────────────
+    const CHAT_STORAGE_KEY = 'trazezzo_chat_history';
+    let chatHistory = [];
+
+    function loadChatHistory() {
+        try {
+            const stored = localStorage.getItem(CHAT_STORAGE_KEY);
+            if (stored) {
+                chatHistory = JSON.parse(stored);
+                const container = document.getElementById('chatMessages');
+                container.innerHTML = '';
+                for (const msg of chatHistory) {
+                    const div = document.createElement('div');
+                    div.className = `chat-msg ${msg.role === 'user' ? 'user' : 'bot'}`;
+                    div.innerHTML = `<div class="bubble">${escapeHtml(msg.content)}</div>`;
+                    container.appendChild(div);
+                }
+                container.scrollTop = container.scrollHeight;
+                return;
+            }
+        } catch(e) { console.error('Load chat error:', e); }
+        // No history — show welcome
+        addBotMessage('Halo! Aku Trazezzo AI. Tanya apapun tentang servermu.<br><br><span style="font-size:0.78rem; color: var(--text-muted);">Mode <b>Calm</b>: advisory only. <b>Aggressive</b>: auto-remediate.</span>');
+    }
+
+    function saveChatHistory() {
+        try {
+            // Keep max 50 messages to avoid localStorage overflow
+            const toSave = chatHistory.slice(-50);
+            localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toSave));
+        } catch(e) { console.error('Save chat error:', e); }
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function addBotMessage(html) {
+        const container = document.getElementById('chatMessages');
+        const div = document.createElement('div');
+        div.className = 'chat-msg bot';
+        div.innerHTML = `<div class="bubble">${html}</div>`;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function addMessage(text, sender) {
+        const container = document.getElementById('chatMessages');
+        const div = document.createElement('div');
+        div.className = `chat-msg ${sender}`;
+        div.innerHTML = `<div class="bubble">${text || '...'}</div>`;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+        return div;
+    }
+
+    let currentImage = null;  // base64 data URI
+    let currentChatMode = 'reasoning'; // reasoning | agent
+
+    function removeImage() {
+        currentImage = null;
+        document.getElementById('imagePreview').style.display = 'none';
+        document.getElementById('previewImg').src = '';
+    }
+
+    // Image paste handler (Ctrl+V)
+    document.addEventListener('paste', (e) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (const item of items) {
+            if (item.type.startsWith('image/')) {
+                const blob = item.getAsFile();
+                if (!blob) continue;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    currentImage = ev.target.result;
+                    document.getElementById('previewImg').src = currentImage;
+                    document.getElementById('imagePreview').style.display = 'block';
+                    // Focus chat input
+                    document.getElementById('chatInput').focus();
+                };
+                reader.readAsDataURL(blob);
+                e.preventDefault();
+                break;
+            }
+        }
+    });
+
+    function clearChat() {
+        if (!confirm('Hapus seluruh chat history?')) return;
+        chatHistory = [];
+        localStorage.removeItem(CHAT_STORAGE_KEY);
+        document.getElementById('chatMessages').innerHTML = '';
+        removeImage();
+        addBotMessage('Chat dihapus. Tanya apa saja tentang servermu.');
+    }
+
+    async function sendChat() {
+        const input = document.getElementById('chatInput');
+        const msg = input.value.trim();
+        if (!msg && !currentImage) return;
+        input.value = '';
+
+        // Show user message (with image thumbnail if present)
+        let userDisplay = escapeHtml(msg);
+        if (currentImage) {
+            userDisplay += `<br><img src="${currentImage}" style="max-width:200px;max-height:150px;border-radius:6px;margin-top:6px;">`;
+        }
+        addMessage(userDisplay, 'user');
+        chatHistory.push({role: 'user', content: msg || '(image)'});
+
+        const botDiv = addMessage('', 'bot');
+        const bubble = botDiv.querySelector('.bubble');
+        bubble.innerHTML = '<span style="color: var(--text-muted);">⏳...</span>';
+
+        // Capture image before clearing
+        const imageData = currentImage;
+        removeImage();
+
+        try {
+            if (currentChatMode === 'agent') {
+                // Agent mode: handle structured events
+                const resp = await fetch('/trazezzo/api/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message: msg, mode: 'agent', image: imageData, history: chatHistory.slice(-10)}),
+                });
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let fullText = '';
+                bubble.innerHTML = '';
+
+                while (true) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+                    const text = decoder.decode(value);
+                    for (const line of text.split('\n')) {
+                        if (line.startsWith('data: ')) {
+                            const dataStr = line.slice(6);
+                            if (dataStr.trim() === '[DONE]') break;
+                            try {
+                                const parsed = JSON.parse(dataStr);
+                                if (parsed.type === 'text' && parsed.chunk) {
+                                    fullText += parsed.chunk;
+                                    bubble.innerHTML = fullText;
+                                } else if (parsed.type === 'action') {
+                                    const a = parsed.action;
+                                    fullText += `<div style="background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; margin: 6px 0; font-family: monospace; font-size: 0.78rem;">🔧 <b>${escapeHtml(a.tool)}</b>: ${escapeHtml(a.command || a.path || a.repo_path || JSON.stringify(a))}</div>`;
+                                    bubble.innerHTML = fullText;
+                                } else if (parsed.type === 'result') {
+                                    const r = parsed.result;
+                                    const status = r.success ? '✅' : '❌';
+                                    const output = (r.stdout || r.content || r.stderr || r.error || '').slice(0, 500);
+                                    fullText += `<div style="font-size: 0.75rem; color: ${r.success ? 'var(--success)' : 'var(--error)'}; margin: 4px 0 8px;">${status} <pre style="margin: 2px 0; white-space: pre-wrap; font-size: 0.72rem;">${escapeHtml(output)}</pre></div>`;
+                                    bubble.innerHTML = fullText;
+                                } else if (parsed.type === 'done') {
+                                    if (parsed.summary) fullText += `\n<div style="margin-top: 6px; font-size: 0.8rem; color: var(--text-muted);">— ${escapeHtml(parsed.summary.slice(0, 200))}</div>`;
+                                    bubble.innerHTML = fullText;
+                                } else if (parsed.type === 'error') {
+                                    bubble.innerHTML = '⚠ ' + parsed.error;
+                                }
+                                document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+                            } catch(e) {}
+                        }
+                    }
+                }
+                chatHistory.push({role: 'assistant', content: fullText.replace(/<[^>]*>/g, '').slice(0, 500)});
+                saveChatHistory();
+            } else {
+                // Reasoning mode: streaming text
+                const resp = await fetch('/trazezzo/api/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message: msg, mode: 'reasoning', image: imageData}),
+                });
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let fullText = '';
+                bubble.innerHTML = '';
+
+                while (true) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+                    const text = decoder.decode(value);
+                    for (const line of text.split('\n')) {
+                        if (line.startsWith('data: ')) {
+                            const dataStr = line.slice(6);
+                            if (dataStr.trim() === '[DONE]') break;
+                            try {
+                                const parsed = JSON.parse(dataStr);
+                                if (parsed.chunk) {
+                                    fullText += parsed.chunk;
+                                    bubble.innerHTML = fullText;
+                                    document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+                                }
+                                if (parsed.error) {
+                                    bubble.innerHTML = '⚠ ' + parsed.error;
+                                }
+                            } catch(e) {}
+                        }
+                    }
+                }
+                chatHistory.push({role: 'assistant', content: fullText});
+                saveChatHistory();
+            }
+        } catch(e) {
+            bubble.innerHTML = '⚠ Error: ' + e.message;
+        }
+    }
+
+    // Load chat history on page load
+    loadChatHistory();
+
+    // ── Execution panel — real-time agent execution display ─────
+    let execWs = null;
+    let execCount = 0;
+
+    // Chat panel expand/collapse
+    let chatExpanded = false;
+    function toggleChatExpand() {
+        chatExpanded = !chatExpanded;
+        const panel = document.getElementById('chatPanel');
+        const exec = document.getElementById('execPanel');
+        const sb = document.getElementById('sidebar');
+        panel.classList.toggle('expanded', chatExpanded);
+        if (chatExpanded) {
+            const sbw = parseInt(getComputedStyle(document.body).getPropertyValue('--sidebar-w')) || 232;
+            const w = (window.innerWidth - sbw) + 'px';
+            document.body.style.setProperty('--chat-w', w);
+            if (exec) exec.style.right = w;
+        } else {
+            document.body.style.removeProperty('--chat-w');
+            if (exec) exec.style.right = '';
+        }
+        const msgs = document.getElementById('chatMessages');
+        if (msgs) msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    // Sidebar minimize/expand
+    let sidebarCollapsed = false;
+    function toggleSidebar() {
+        sidebarCollapsed = !sidebarCollapsed;
+        const sb = document.getElementById('sidebar');
+        sb.classList.toggle('collapsed', sidebarCollapsed);
+        document.body.classList.toggle('sidebar-collapsed', sidebarCollapsed);
+        const sbw = sidebarCollapsed ? 56 : (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w')) || 232);
+        // If chat is expanded, recalculate its width
+        if (chatExpanded) {
+            const chatw = (window.innerWidth - sbw) + 'px';
+            document.body.style.setProperty('--chat-w', chatw);
+            const exec = document.getElementById('execPanel');
+            if (exec) exec.style.right = chatw;
+        }
+        const btn = document.getElementById('sidebarToggle');
+        if (btn) btn.querySelector('svg').style.transform = sidebarCollapsed ? 'rotate(180deg)' : '';
+    }
+
+    function toggleExecPanel() {
+        const panel = document.getElementById('execPanel');
+        const btn = document.getElementById('execPanelBtn');
+        panel.classList.toggle('open');
+        btn.classList.toggle('active');
+    }
+
+    function addExecItem(data) {
+        const body = document.getElementById('execPanelBody');
+        // Remove placeholder
+        if (body.querySelector('div[style*="text-align: center"]')) {
+            body.innerHTML = '';
+        }
+
+        const status = data.success === undefined ? 'running' : (data.success ? 'success' : 'failed');
+        const icon = status === 'running' ? '○' : (status === 'success' ? '●' : '●');
+        const source = data.source || 'agent';
+
+        const item = document.createElement('div');
+        item.className = `exec-item ${status}`;
+        item.id = `exec-${data.id || execCount}`;
+        item.innerHTML = `
+            <div class="cmd-header">
+                <span class="status-icon">${icon}</span>
+                <span>${data.command || data.message || 'executing...'}</span>
+                <span class="source">${source}</span>
+            </div>
+            <div class="cmd-output">${data.output || data.stderr || ''}</div>
+        `;
+        body.prepend(item);
+        body.scrollTop = 0;
+
+        // Show badge
+        execCount++;
+        const badge = document.getElementById('execBadge');
+        badge.textContent = execCount;
+        const btn = document.getElementById('execPanelBtn');
+        btn.style.display = 'flex';
+
+        // Auto-open panel on first execution
+        if (execCount === 1) {
+            document.getElementById('execPanel').classList.add('open');
+            btn.classList.add('active');
+        }
+    }
+
+    function connectExecStream() {
+        const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+        execWs = new WebSocket(`${proto}://${location.host}/trazezzo/ws/exec`);
+        execWs.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                addExecItem(data);
+            } catch(e) {}
+        };
+        execWs.onclose = () => {
+            setTimeout(connectExecStream, 5000);
+        };
+    }
+
+    // Connect exec stream on load
+    connectExecStream();
+
+    // ── Auto recommendations ──────────────────────────────────
+    function toggleRecPanel() {
+        const list = document.getElementById('recList');
+        list.style.display = list.style.display === 'none' ? 'block' : 'none';
+        if (list.style.display === 'block') loadRecommendations();
+    }
+
+    async function loadRecommendations() {
+        try {
+            const resp = await fetch('/trazezzo/api/recommendations');
+            const data = await resp.json();
+            const list = document.getElementById('recList');
+            const badge = document.getElementById('recBadge');
+
+            if (!data.recommendations || data.recommendations.length === 0) {
+                list.innerHTML = '<div style="color: var(--success); font-size: 0.78rem; padding: 4px 8px;">✓ No issues. All good!</div>';
+                badge.textContent = '0';
+                badge.classList.add('zero');
+                return;
+            }
+
+            badge.textContent = data.recommendations.length;
+            badge.classList.remove('zero');
+
+            let html = '';
+            for (const rec of data.recommendations) {
+                const cls = rec.severity || 'info';
+                const icon = cls === 'error' ? '●' : cls === 'warning' ? '●' : cls === 'success' ? '●' : '●';
+                let actionHtml = '';
+                if (rec.action_type) {
+                    actionHtml = `<button class="action-btn" onclick="executeRecAction('${rec.action_type}', ${JSON.stringify(rec.action_args || {}).replace(/"/g, '&quot;')})">${rec.action_label || 'Fix'}</button>`;
+                }
+                html += `<div class="rec-item ${cls}"><span class="icon">${icon}</span><span class="text">${rec.message}</span>${actionHtml}</div>`;
+            }
+            list.innerHTML = html;
+        } catch(e) {
+            console.error('Rec load error:', e);
+        }
+    }
+
+    function executeRecAction(actionType, args) {
+        if (!confirm(`Execute: ${actionType}?\n${JSON.stringify(args, null, 2)}`)) return;
+        fetch('/trazezzo/api/recommendations/execute', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action_type: actionType, action_args: args}),
+        })
+        .then(r => r.json())
+        .then(data => {
+            alert(data.success ? '✓ Executed: ' + (data.output || 'OK') : '⚠ ' + (data.error || 'Failed'));
+            loadRecommendations();
+        });
+    }
+
+    // ── Init: hostname + recommendations polling ────────────────
+    (async function initHostname() {
+        try {
+            const resp = await fetch('/trazezzo/api/overview');
+            const data = await resp.json();
+            document.getElementById('topbarHostname').textContent = data.hostname || 'Server';
+        } catch(e) {}
+    })();
+
+    // Auto-load recommendations on page load + poll every 30s
+    setTimeout(() => { loadRecommendations(); document.getElementById('recList').style.display = 'block'; }, 1000);
+    setInterval(loadRecommendations, 30000);
+    </script>
+</body>
+</html>

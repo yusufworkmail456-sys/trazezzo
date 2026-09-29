@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo — Networking{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>Networking</h2>
+ <div class="desc">{{ interfaces | length }} interfaces</div>
+</div>
+
+<div class="card">
+ <div class="card-title">Interfaces</div>
+ <table>
+ <thead><tr><th>Name</th><th>Status</th><th>Addresses</th><th>Speed</th><th>MTU</th></tr></thead>
+ <tbody>
+ {% for iface in interfaces %}
+ <tr>
+ <td><strong>{{ iface.name }}</strong></td>
+ <td>{% if iface.isup %}<span class="badge active">UP</span>{% else %}<span class="badge inactive">DOWN</span>{% endif %}</td>
+ <td>{% for addr in iface.addrs %}<span class="badge {% if addr.family == 'ipv4' %}active{% elif addr.family == 'ipv6' %}warn{% else %}inactive{% endif %}">{{ addr.addr }}</span> {% endfor %}</td>
+ <td>{{ iface.speed }} Mbps</td>
+ <td>{{ iface.mtu }}</td>
+ </tr>
+ {% endfor %}
+ </tbody>
+ </table>
+</div>
+
+<div class="grid grid-2">
+ <div class="card">
+ <div class="card-title">Routing Table</div>
+ <pre style="font-size: 0.8rem; white-space: pre-wrap;">{% for route in routes %}{{ route }}
+{% endfor %}</pre>
+ </div>
+ <div class="card">
+ <div class="card-title">Firewall ({{ firewall.type }})</div>
+ <pre style="font-size: 0.8rem; white-space: pre-wrap;">{{ firewall.status }}</pre>
+ </div>
+</div>
+{% endblock %}

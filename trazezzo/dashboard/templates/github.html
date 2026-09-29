@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo — GitHub Integration{% endblock %}
+{% block head %}
+<style>
+ .gh-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+ .gh-card-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+ .gh-token-input { width: 100%; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; font-family: monospace; font-size: 0.82rem; margin-bottom: 8px; }
+ .gh-user-info { display: flex; align-items: center; gap: 12px; }
+ .gh-user-info img { width: 48px; height: 48px; border-radius: 50%; }
+ .gh-user-info .login { font-weight: 600; font-size: 0.95rem; }
+ .gh-user-info .url { font-size: 0.78rem; color: var(--text-muted); }
+ .repo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+ .repo-item { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; cursor: pointer; transition: all 0.15s; }
+ .repo-item:hover { border-color: var(--primary); }
+ .repo-item .name { font-weight: 600; font-size: 0.85rem; }
+ .repo-item .desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 3px; }
+ .repo-item .meta { font-size: 0.7rem; color: var(--text-muted); margin-top: 6px; display: flex; gap: 10px; }
+ .repo-item .private { background: var(--warning); color: #1e1e1e; padding: 1px 6px; border-radius: 3px; font-size: 0.65rem; font-weight: 600; }
+ .repo-item .lang { color: var(--primary); }
+ .commit-list { margin-top: 8px; }
+ .commit-item { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
+ .commit-item:last-child { border-bottom: none; }
+ .commit-item .sha { font-family: monospace; background: var(--bg); padding: 1px 5px; border-radius: 3px; font-size: 0.72rem; color: var(--primary); }
+ .commit-item .msg { margin-top: 3px; }
+ .commit-item .author { font-size: 0.72rem; color: var(--text-muted); }
+ .push-form { display: grid; gap: 8px; margin-top: 12px; }
+ .push-form input, .push-form textarea { padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; font-size: 0.82rem; font-family: monospace; }
+ .push-form textarea { min-height: 60px; resize: vertical; }
+ .gh-section { margin-top: 20px; }
+ .gh-hidden { display: none; }
+ .gh-result { margin-top: 12px; padding: 12px; border-radius: 6px; font-size: 0.8rem; font-family: monospace; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+ .gh-result.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: var(--success); }
+ .gh-result.error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--error); }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>GitHub Integration</h2>
+ <div class="desc">Securely connect GitHub — manage repos, push commits, create PRs directly from Trazezzo</div>
+</div>
+
+{# ── Token setup ────────────────────────────────────────────── #}
+<div class="gh-card" id="tokenCard">
+ <div class="gh-card-title">Token Configuration</div>
+ {% if has_token %}
+ <div class="gh-user-info" id="userInfo">
+ {% if user and not user.error %}
+ <img src="{{ user.avatar_url }}" alt="avatar">
+ <div>
+ <div class="login">{{ user.login }}</div>
+ <div class="url"><a href="{{ user.html_url }}" target="_blank">{{ user.html_url }}</a> · {{ user.public_repos }} repos</div>
+ </div>
+ </div>
+ <div style="margin-top: 12px; display: flex; gap: 8px;">
+ <button class="btn btn-sm btn-danger" onclick="deleteToken()">Disconnect</button>
+ <button class="btn btn-sm" onclick="loadRepos()">Refresh Repos</button>
+ </div>
+ {% else %}
+ <div style="color: var(--success); font-size: 0.82rem; margin-bottom: 8px;">Token configured</div>
+ <button class="btn btn-sm btn-danger" onclick="deleteToken()">Disconnect</button>
+ <button class="btn btn-sm" onclick="loadRepos()">Refresh Repos</button>
+ {% endif %}
+</div>
+
+{# ── Repos list ─────────────────────────────────────────────── #}
+<div class="gh-card gh-hidden" id="reposCard">
+ <div class="gh-card-title">Your Repositories</div>
+ <div id="reposList">Loading...</div>
+</div>
+
+{# ── Push form ──────────────────────────────────────────────── #}
+<div class="gh-card gh-hidden" id="pushCard">
+ <div class="gh-card-title">Push Changes</div>
+ <div class="push-form">
+ <input type="text" id="pushRepoPath" placeholder="Local repo path (e.g. /opt/trazezzo)">
+ <input type="text" id="pushBranch" placeholder="Branch (optional, e.g. main)">
+ <textarea id="pushMessage" placeholder="Commit message..."></textarea>
+ <div style="display: flex; gap: 8px;">
+ <button class="btn btn-sm btn-primary" onclick="doPush()">Push</button>
+ <button class="btn btn-sm" onclick="createPRFromPush()">Create PR After Push</button>
+ </div>
+ </div>
+ <div class="gh-result gh-hidden" id="pushResult"></div>
+</div>
+
+{# ── Repo detail ────────────────────────────────────────────── #}
+<div class="gh-card gh-hidden" id="detailCard">
+ <div class="gh-card-title" id="detailTitle">Repo Details</div>
+ <div id="detailContent"></div>
+</div>
+
+{% else %}
+ <div style="margin-bottom: 8px; font-size: 0.82rem; color: var(--text-muted);">No token configured. Paste your GitHub Personal Access Token (PAT) below.</div>
+ <input type="password" class="gh-token-input" id="tokenInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+ <div style="display: flex; gap: 8px;">
+ <button class="btn btn-sm btn-primary" onclick="saveToken()">Save Token</button>
+ </div>
+ <div style="margin-top: 12px; font-size: 0.75rem; color: var(--text-muted);">
+ <strong>How to get a token:</strong><br>
+ 1. Go to GitHub → Settings → Developer settings → Personal access tokens<br>
+ 2. Generate new token (classic) with scopes: <code>repo</code>, <code>read:user</code><br>
+ 3. Copy and paste here. Token stored locally with 0600 permissions.
+ </div>
+</div>
+{% endif %}
+
+<div class="gh-card">
+ <div class="gh-card-title">Quick Actions</div>
+ <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+ <button class="btn btn-sm" onclick="quickPush('/opt/trazezzo', 'Update Trazezzo')">Push Trazezzo Changes</button>
+ <button class="btn btn-sm" onclick="quickPush('/opt/trazezzo', 'Update trazezzo')">Push trazezzo</button>
+ </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+async function saveToken() {
+ const token = document.getElementById('tokenInput').value.trim();
+ if (!token) { alert('Token cannot be empty'); return; }
+ const resp = await fetch('/trazezzo/api/github/token', {
+ method: 'POST',
+ headers: {'Content-Type': 'application/json'},
+ body: JSON.stringify({token}),
+ });
+ const data = await resp.json();
+ if (data.success) {
+ location.reload();
+ } else {
+ alert('Error: ' + (data.error || 'Failed'));
+ }
+}
+
+async function deleteToken() {
+ if (!confirm('Disconnect GitHub? Token will be deleted.')) return;
+ await fetch('/trazezzo/api/github/token', { method: 'DELETE' });
+ location.reload();
+}
+
+async function loadRepos() {
+ document.getElementById('reposCard').classList.remove('gh-hidden');
+ document.getElementById('reposList').innerHTML = '<div style="color: var(--text-muted); font-size: 0.82rem;">Loading repos...</div>';
+ const resp = await fetch('/trazezzo/api/github/repos');
+ const data = await resp.json();
+ if (data.error) {
+ document.getElementById('reposList').innerHTML = `<div style="color: var(--error);">${data.error}</div>`;
+ return;
+ }
+ let html = `<div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px;">${data.count} repositories</div>`;
+ html += '<div class="repo-grid">';
+ for (const repo of data.repos) {
+ html += `<div class="repo-item" onclick="showRepoDetail('${repo.full_name}')">
+ <div class="name">${repo.name} ${repo.private ? '<span class="private">private</span>' : ''}</div>
+ <div class="desc">${repo.description || 'No description'}</div>
+ <div class="meta">
+ ${repo.language ? `<span class="lang">${repo.language}</span>` : ''}
+ <span>branch: ${repo.default_branch}</span>
+ </div>
+ </div>`;
+ }
+ html += '</div>';
+ document.getElementById('reposList').innerHTML = html;
+
+ // Show push card
+ document.getElementById('pushCard').classList.remove('gh-hidden');
+}
+
+async function showRepoDetail(fullName) {
+ const [owner, repo] = fullName.split('/');
+ document.getElementById('detailCard').classList.remove('gh-hidden');
+ document.getElementById('detailTitle').textContent = `${fullName}`;
+
+ // Get repo info + commits in parallel
+ const [infoResp, commitsResp] = await Promise.all([
+ fetch(`/trazezzo/api/github/repos/${owner}/${repo}`),
+ fetch(`/trazezzo/api/github/repos/${owner}/${repo}/commits`),
+ ]);
+ const info = await infoResp.json();
+ const commits = await commitsResp.json();
+
+ let html = '';
+ if (info && !info.error) {
+ html += `<div style="margin-bottom: 12px;">
+ <div style="font-size: 0.85rem; font-weight: 600;"><a href="${info.html_url}" target="_blank">${info.full_name}</a></div>
+ <div style="font-size: 0.78rem; color: var(--text-muted);">${info.description || 'No description'}</div>
+ <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">
+ ★ ${info.stargazers_count} · ${info.forks_count} · ${info.language || 'N/A'} · branch: ${info.default_branch}
+ </div>
+ </div>`;
+ }
+ if (commits && !commits.error && commits.commits) {
+ html += '<div class="commit-list"><div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 6px;">Recent commits:</div>';
+ for (const c of commits.commits) {
+ html += `<div class="commit-item">
+ <span class="sha">${c.sha}</span> <span class="msg">${c.message}</span>
+ <div class="author">${c.author} · ${new Date(c.date).toLocaleString()}</div>
+ </div>`;
+ }
+ html += '</div>';
+ }
+ document.getElementById('detailContent').innerHTML = html;
+}
+
+async function doPush() {
+ const repoPath = document.getElementById('pushRepoPath').value.trim();
+ const branch = document.getElementById('pushBranch').value.trim();
+ const message = document.getElementById('pushMessage').value.trim() || 'Update from Trazezzo';
+ if (!repoPath) { alert('Repo path required'); return; }
+
+ const result = document.getElementById('pushResult');
+ result.classList.remove('gh-hidden');
+ result.className = 'gh-result';
+ result.textContent = 'Pushing...';
+
+ const resp = await fetch('/trazezzo/api/github/push', {
+ method: 'POST',
+ headers: {'Content-Type': 'application/json'},
+ body: JSON.stringify({repo_path: repoPath, branch: branch || null, message}),
+ });
+ const data = await resp.json();
+ if (data.success) {
+ result.className = 'gh-result success';
+ result.textContent = `${data.message || 'Pushed successfully'}`;
+ if (data.steps) {
+ result.textContent += '\n\nSteps:\n' + data.steps.map(s => `${s.step}: ${s.success ? 'OK' : 'FAILED'}\n${s.stderr || s.stdout || ''}`).join('\n');
+ }
+ } else {
+ result.className = 'gh-result error';
+ let msg = data.error || 'Push failed';
+ if (data.steps) {
+ msg += '\n\nSteps:\n' + data.steps.map(s => `${s.step}: ${s.success ? 'OK' : 'FAILED'}\n${s.stderr || s.stdout || ''}`).join('\n');
+ }
+ result.textContent = msg;
+ }
+}
+
+function quickPush(path, message) {
+ document.getElementById('pushCard').classList.remove('gh-hidden');
+ document.getElementById('pushRepoPath').value = path;
+ document.getElementById('pushMessage').value = message;
+ doPush();
+}
+
+async function createPRFromPush() {
+ const fullName = prompt('Repo (owner/repo):');
+ if (!fullName) return;
+ const [owner, repo] = fullName.split('/');
+ const head = prompt('Head branch (feature branch):');
+ if (!head) return;
+ const title = prompt('PR title:');
+ if (!title) return;
+ const resp = await fetch('/trazezzo/api/github/pr', {
+ method: 'POST',
+ headers: {'Content-Type': 'application/json'},
+ body: JSON.stringify({owner, repo, head, title, base: 'main', body: 'Created from Trazezzo'}),
+ });
+ const data = await resp.json();
+ if (data.success) {
+ alert(`PR #${data.number} created: ${data.html_url}`);
+ } else {
+ alert('Error: ' + (data.error || 'Failed'));
+ }
+}
+
+// Auto-load repos if token exists
+{% if has_token %}
+setTimeout(loadRepos, 500);
+{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo — Services{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>Services</h2>
+ <div class="desc">{{ services | length }} systemd services</div>
+</div>
+
+{% if failed %}
+<div class="card" style="border-color: var(--error);">
+ <div class="card-title" style="color: var(--error);">Failed Services ({{ failed | length }})</div>
+ {% for svc in failed %}
+ <div style="padding: 4px 0; display: flex; justify-content: space-between; align-items: center;">
+ <span style="color: var(--error);">{{ svc }}</span>
+ <div>
+ <button class="btn btn-sm btn-primary" onclick="svcAction('{{ svc }}', 'restart')">Restart</button>
+ <button class="btn btn-sm" onclick="svcAction('{{ svc }}', 'status')">Status</button>
+ </div>
+ </div>
+ {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+ <div class="card-title">All Services</div>
+ <input type="text" id="svcSearch" placeholder="Search services..." style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 12px;">
+ <table>
+ <thead>
+ <tr><th>Unit</th><th>Load</th><th>Active</th><th>Sub</th><th>Description</th><th>Actions</th></tr>
+ </thead>
+ <tbody id="svcTable">
+ {% for svc in services %}
+ <tr data-search="{{ svc.unit | lower }} {{ svc.description | lower }}">
+ <td><strong>{{ svc.unit }}</strong></td>
+ <td>{{ svc.load }}</td>
+ <td><span class="badge {% if svc.active == 'active' %}active{% elif svc.active == 'failed' %}failed{% else %}inactive{% endif %}">{{ svc.active }}</span></td>
+ <td>{{ svc.sub }}</td>
+ <td style="color: var(--text-muted); font-size: 0.8rem;">{{ svc.description }}</td>
+ <td>
+ <button class="btn btn-sm btn-primary" onclick="svcAction('{{ svc.unit }}', 'restart')">⟳</button>
+ <button class="btn btn-sm" onclick="svcAction('{{ svc.unit }}', 'stop')">⏹</button>
+ <button class="btn btn-sm" onclick="svcAction('{{ svc.unit }}', 'start')">▶</button>
+ </td>
+ </tr>
+ {% endfor %}
+ </tbody>
+ </table>
+</div>
+
+<script>
+function svcAction(unit, action) {
+ if (!confirm(`${action} service: ${unit}?`)) return;
+ fetch(`/trazezzo/api/services/${encodeURIComponent(unit)}/${action}`, { method: 'POST' })
+ .then(r => r.json())
+ .then(data => {
+ alert(data.success !== false ? `${unit}: ${action} OK` : `${data.error || 'Failed'}`);
+ setTimeout(() => location.reload(), 1000);
+ })
+ .catch(e => alert('Error: ' + e));
+}
+document.getElementById('svcSearch').addEventListener('input', e => {
+ const q = e.target.value.toLowerCase();
+ document.querySelectorAll('#svcTable tr').forEach(tr => {
+ tr.style.display = tr.dataset.search.includes(q) ? '' : 'none';
+ });
+});
+</script>
+{% endblock %}

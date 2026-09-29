@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo — Connections{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>Network Connections</h2>
+ <div class="desc">Active TCP/UDP connections and listening ports</div>
+</div>
+
+<div class="grid grid-2">
+ <div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+   <div class="card-title" style="margin: 0;">Listening Ports ({{ listening_ports|length }})</div>
+   <button class="btn btn-sm" onclick="location.reload()">Refresh</button>
+  </div>
+  <div style="overflow-x: auto;">
+   <table style="width: 100%; font-size: 0.82rem;">
+    <thead><tr>
+     <th style="text-align: left; padding: 6px 8px;">Proto</th>
+     <th style="text-align: left; padding: 6px 8px;">Address</th>
+     <th style="text-align: right; padding: 6px 8px;">Port</th>
+     <th style="text-align: left; padding: 6px 8px;">Process</th>
+     <th style="text-align: right; padding: 6px 8px;">PID</th>
+    </tr></thead>
+    <tbody>
+     {% for p in listening_ports %}
+     <tr style="border-bottom: 1px solid var(--border);">
+      <td style="padding: 4px 8px; font-family: var(--font-mono);">{{ p.proto }}</td>
+      <td style="padding: 4px 8px;">{{ p.addr }}</td>
+      <td style="padding: 4px 8px; text-align: right; font-family: var(--font-mono); font-weight: 600; color: var(--primary);">{{ p.port }}</td>
+      <td style="padding: 4px 8px;">{{ p.process }}</td>
+      <td style="padding: 4px 8px; text-align: right; font-family: var(--font-mono);">{{ p.pid }}</td>
+     </tr>
+     {% endfor %}
+    </tbody>
+   </table>
+  </div>
+ </div>
+
+ <div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+   <div class="card-title" style="margin: 0;">Active Connections ({{ connections|length }})</div>
+   <button class="btn btn-sm" onclick="location.reload()">Refresh</button>
+  </div>
+  <div style="overflow-x: auto; max-height: 500px; overflow-y: auto;">
+   <table style="width: 100%; font-size: 0.82rem;">
+    <thead><tr>
+     <th style="text-align: left; padding: 6px 8px;">Proto</th>
+     <th style="text-align: left; padding: 6px 8px;">Local</th>
+     <th style="text-align: left; padding: 6px 8px;">Peer</th>
+     <th style="text-align: left; padding: 6px 8px;">State</th>
+     <th style="text-align: left; padding: 6px 8px;">Process</th>
+    </tr></thead>
+    <tbody>
+     {% for c in connections %}
+     <tr style="border-bottom: 1px solid var(--border);">
+      <td style="padding: 4px 8px; font-family: var(--font-mono);">{{ c.proto }}</td>
+      <td style="padding: 4px 8px; font-family: var(--font-mono); font-size: 0.78rem;">{{ c.local }}</td>
+      <td style="padding: 4px 8px; font-family: var(--font-mono); font-size: 0.78rem;">{{ c.peer }}</td>
+      <td style="padding: 4px 8px;"><span class="badge {% if c.state == 'ESTAB' %}active{% elif c.state == 'TIME-WAIT' %}inactive{% else %}{% endif %}">{{ c.state }}</span></td>
+      <td style="padding: 4px 8px;">{{ c.process }}</td>
+     </tr>
+     {% endfor %}
+    </tbody>
+   </table>
+  </div>
+ </div>
+</div>
+{% endblock %}

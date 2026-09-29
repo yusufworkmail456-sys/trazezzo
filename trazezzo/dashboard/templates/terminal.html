@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo — Terminal{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>Web Terminal</h2>
+ <div class="desc">Interactive shell — root access</div>
+</div>
+
+<div class="terminal" id="term"></div>
+
+<script>
+const wsUrl = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/trazezzo/ws/terminal`;
+const ws = new WebSocket(wsUrl);
+const term = document.getElementById('term');
+
+ws.onopen = () => {
+ term.innerHTML = '<div class="line">Connected.\r\n</div>';
+};
+
+ws.onmessage = (event) => {
+ const line = document.createElement('div');
+ line.className = 'line';
+ line.textContent = event.data;
+ term.appendChild(line);
+ term.scrollTop = term.scrollHeight;
+};
+
+ws.onclose = () => {
+ const line = document.createElement('div');
+ line.className = 'line';
+ line.textContent = '\r\n[Disconnected]';
+ term.appendChild(line);
+};
+
+document.addEventListener('keydown', (e) => {
+ if (ws.readyState === WebSocket.OPEN) {
+ if (e.ctrlKey) {
+ // Send control chars
+ const ctrl = String.fromCharCode(e.keyCode).toLowerCase();
+ const code = ctrl.charCodeAt(0) - 96;
+ ws.send(String.fromCharCode(code));
+ } else {
+ ws.send(e.key);
+ }
+ }
+});
+
+term.addEventListener('click', () => {
+ // Focus simulation
+ term.style.borderColor = 'var(--primary)';
+});
+</script>
+{% endblock %}

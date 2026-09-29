@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo — File Editor{% endblock %}
+{% block head %}
+<style>
+ .editor-layout { display: grid; grid-template-columns: 280px 1fr; gap: 12px; height: calc(100vh - 180px); }
+ .file-tree { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow-y: auto; padding: 10px; }
+ .file-tree-item { padding: 3px 6px; cursor: pointer; border-radius: 4px; font-size: 0.82rem; display: flex; align-items: center; gap: 5px; }
+ .file-tree-item:hover { background: var(--bg); }
+ .file-tree-item.dir { font-weight: 600; }
+ .file-tree-item .icon { width: 16px; font-size: 0.9rem; }
+ .editor-pane { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+ .editor-toolbar { display: flex; gap: 6px; align-items: center; }
+ .editor-toolbar .path { flex: 1; padding: 5px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; font-family: monospace; font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ .editor-content { flex: 1; width: 100%; background: #1e1e1e; color: #e2e8f0; border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-family: 'Monaco', 'Menlo', 'Consolas', monospace; font-size: 0.82rem; resize: none; line-height: 1.6; tab-size: 4; }
+ .editor-content:focus { outline: none; border-color: var(--primary); }
+ .breadcrumb { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 4px; }
+ .file-info { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between; }
+ .quick-paths { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+ .quick-path { padding: 3px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; font-size: 0.75rem; cursor: pointer; transition: all 0.15s; }
+ .quick-path:hover { border-color: var(--primary); color: var(--primary); }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>File Editor</h2>
+ <div class="desc">Browse, read, edit config files. Auto-backup before write. Blocked: shadow, .env, SSH keys.</div>
+</div>
+
+<div class="quick-paths">
+ <span class="quick-path" onclick="loadTree('/etc')">/etc</span>
+ <span class="quick-path" onclick="loadTree('/etc/nginx')">/etc/nginx</span>
+ <span class="quick-path" onclick="loadTree('/etc/systemd')">/etc/systemd</span>
+ <span class="quick-path" onclick="loadTree('/opt/trazezzo')">trazezzo</span>
+ <span class="quick-path" onclick="loadTree('/var/lib/trazezzo')">trazezzo data</span>
+</div>
+
+<div class="editor-layout">
+ <div class="file-tree" id="fileTree">
+ <div class="breadcrumb" id="breadcrumb">/</div>
+ <div id="treeContent">Loading...</div>
+ </div>
+ <div class="editor-pane">
+ <div class="editor-toolbar">
+ <span class="path" id="currentPath">Select a file to edit</span>
+ <button class="btn btn-sm" onclick="loadTree(currentDir)" title="Refresh tree"></button>
+ <button class="btn btn-sm" onclick="showUploadDialog()" title="Upload file from laptop">⬆️ Upload</button>
+ <button class="btn btn-sm" onclick="showMkdirDialog()" title="Create new folder">+ New Folder</button>
+ <button class="btn btn-sm btn-danger" id="deleteBtn" onclick="deleteFile()" disabled></button>
+ <button class="btn btn-sm btn-primary" id="saveBtn" onclick="saveFile()" disabled>Save</button>
+ </div>
+ <textarea class="editor-content" id="editorContent" placeholder="Select a file from the tree to edit..." spellcheck="false" disabled></textarea>
+ <div class="file-info" id="fileInfo">
+ <span id="fileSize">No file selected</span>
+ <span id="backupInfo"></span>
+ </div>
+ </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+let currentDir = '/etc';
+let currentFile = null;
+let originalContent = '';
+
+function escapeJs(s) {
+ return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+function loadTree(path) {
+ currentDir = path;
+ fetch(`/trazezzo/api/editor/ls?path=${encodeURIComponent(path)}`)
+ .then(r => r.json())
+ .then(data => {
+ if (data.error) {
+ document.getElementById('treeContent').innerHTML = `<div style="color: var(--error); font-size: 0.8rem;">${data.error}</div>`;
+ return;
+ }
+ document.getElementById('breadcrumb').textContent = data.path;
+ let html = '';
+ if (data.parent) {
+ html += `<div class="file-tree-item dir" onclick="loadTree('${escapeJs(data.parent)}')"><span class="icon"></span> ../</div>`;
+ }
+ const dirs = data.entries.filter(e => e.is_dir);
+ const files = data.entries.filter(e => !e.is_dir);
+ for (const entry of dirs) {
+ html += `<div class="file-tree-item dir" onclick="loadTree('${escapeJs(entry.path)}')"><span class="icon"></span> ${entry.name}</div>`;
+ }
+ for (const entry of files) {
+ const sizeStr = entry.size > 1024 ? `${(entry.size/1024).toFixed(1)}KB` : `${entry.size}B`;
+ html += `<div class="file-tree-item" onclick="loadFile('${escapeJs(entry.path)}')"><span class="icon"></span> ${entry.name} <span style="color:var(--text-muted); font-size:0.7rem;">${sizeStr}</span></div>`;
+ }
+ document.getElementById('treeContent').innerHTML = html || '<div style="color: var(--text-muted); font-size: 0.8rem;">Empty</div>';
+ });
+}
+
+function loadFile(path) {
+ fetch(`/trazezzo/api/editor/read?path=${encodeURIComponent(path)}`)
+ .then(r => r.json())
+ .then(data => {
+ if (data.error) { alert(data.error); return; }
+ currentFile = data.path;
+ originalContent = data.content;
+ document.getElementById('currentPath').textContent = data.path;
+ document.getElementById('editorContent').value = data.content;
+ document.getElementById('editorContent').disabled = false;
+ document.getElementById('saveBtn').disabled = false;
+ document.getElementById('deleteBtn').disabled = false;
+ const sizeStr = data.size > 1024 ? `${(data.size/1024).toFixed(1)} KB` : `${data.size} bytes`;
+ document.getElementById('fileSize').textContent = `${sizeStr} · perms: ${data.permissions}`;
+ });
+}
+
+function saveFile() {
+ if (!currentFile) return;
+ const content = document.getElementById('editorContent').value;
+ if (content === originalContent) { alert('No changes to save.'); return; }
+ if (!confirm(`Save changes to ${currentFile}?\nA backup (.trazezzo.bak) will be created.`)) return;
+ fetch('/trazezzo/api/editor/write', {
+ method: 'POST',
+ headers: {'Content-Type': 'application/json'},
+ body: JSON.stringify({path: currentFile, content}),
+ })
+ .then(r => r.json())
+ .then(data => {
+ if (data.error) { alert('Error: ' + data.error); return; }
+ originalContent = content;
+ document.getElementById('backupInfo').textContent = data.backup ? `Backup: ${data.backup.split('/').pop()}` : '';
+ alert('Saved! Backup created.');
+ });
+}
+
+function deleteFile() {
+ if (!currentFile) return;
+ if (!confirm(`Delete ${currentFile}?\nA backup will be created before deletion.`)) return;
+ fetch('/trazezzo/api/editor/delete', {
+ method: 'POST',
+ headers: {'Content-Type': 'application/json'},
+ body: JSON.stringify({path: currentFile}),
+ })
+ .then(r => r.json())
+ .then(data => {
+ if (data.error) { alert('Error: ' + data.error); return; }
+ document.getElementById('editorContent').value = '';
+ document.getElementById('editorContent').disabled = true;
+ document.getElementById('saveBtn').disabled = true;
+ document.getElementById('deleteBtn').disabled = true;
+ document.getElementById('currentPath').textContent = 'Select a file to edit';
+ currentFile = null;
+ loadTree(currentDir);
+ alert('Deleted. Backup created.');
+ });
+}
+
+// Init
+loadTree(currentDir);
+
+// ── Upload file from local laptop ────────────────────────
+function showUploadDialog() {
+ // Create hidden file input
+ const existing = document.getElementById('uploadInput');
+ if (existing) existing.remove();
+ const input = document.createElement('input');
+ input.id = 'uploadInput';
+ input.type = 'file';
+ input.style.display = 'none';
+ input.onchange = (e) => {
+ const file = e.target.files[0];
+ if (!file) return;
+ uploadFile(file);
+ input.remove();
+ };
+ document.body.appendChild(input);
+ input.click();
+}
+
+function uploadFile(file) {
+ const formData = new FormData();
+ formData.append('file', file);
+ formData.append('dir', currentDir);
+ fetch('/trazezzo/api/editor/upload', {
+ method: 'POST',
+ body: formData,
+ })
+ .then(r => r.json())
+ .then(data => {
+ if (data.error) { alert('Error: ' + data.error); return; }
+ loadTree(currentDir);
+ alert(`Uploaded: ${file.name} → ${data.path}`);
+ })
+ .catch(e => alert('Upload error: ' + e.message));
+}
+
+// ── Create new folder ─────────────────────────────────────
+function showMkdirDialog() {
+ const name = prompt(`Create new folder in:\n${currentDir}\n\nFolder name:`);
+ if (!name || !name.trim()) return;
+ const fullPath = currentDir.endsWith('/') ? currentDir + name.trim() : currentDir + '/' + name.trim();
+ fetch('/trazezzo/api/editor/mkdir', {
+ method: 'POST',
+ headers: {'Content-Type': 'application/json'},
+ body: JSON.stringify({path: fullPath}),
+ })
+ .then(r => r.json())
+ .then(data => {
+ if (data.error) { alert('Error: ' + data.error); return; }
+ loadTree(currentDir);
+ alert(`Folder created: ${data.path}`);
+ })
+ .catch(e => alert('Error: ' + e.message));
+}
+</script>
+{% endblock %}

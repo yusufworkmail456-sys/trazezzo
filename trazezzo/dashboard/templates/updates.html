@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo — Updates{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>Software Updates</h2>
+ <div class="desc">{% if updates.available %}{{ updates.count }} updates available ({{ updates.package_manager }}){% else %}No package manager detected{% endif %}</div>
+</div>
+
+{% if updates.available %}
+<div class="card">
+ <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+ <div class="card-title" style="margin: 0;">Available Updates</div>
+ <button class="btn btn-primary" onclick="applyUpdates()">Apply All Updates</button>
+ </div>
+ {% if updates.updates %}
+ <table>
+ <thead><tr><th>Package</th><th>Details</th></tr></thead>
+ <tbody>
+ {% for u in updates.updates %}
+ <tr>
+ <td><strong>{{ u.name }}</strong></td>
+ <td style="font-size: 0.8rem; color: var(--text-muted);">{{ u.raw if u.raw else u.version if u.version else '' }}</td>
+ </tr>
+ {% endfor %}
+ </tbody>
+ </table>
+ {% else %}
+ <div style="color: var(--success); padding: 20px; text-align: center;">System is up to date</div>
+ {% endif %}
+</div>
+{% else %}
+<div class="card">
+ <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+ No package manager detected on this system.
+ </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block script %}
+<script>
+function applyUpdates() {
+ if (!confirm('Apply all available updates? This may take a few minutes.')) return;
+ alert('Updates are being applied in the background. Check logs for progress.');
+ fetch('/trazezzo/api/updates/apply', { method: 'POST' })
+ .then(r => r.json())
+ .then(data => {
+ if (data.success) {
+ alert('Updates applied successfully!');
+ } else {
+ alert('Update process completed with errors. Check dashboard logs.');
+ }
+ location.reload();
+ });
+}
+</script>
+{% endblock %}

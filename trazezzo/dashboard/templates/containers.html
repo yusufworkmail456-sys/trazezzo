@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo -- Containers{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>Containers</h2>
+ <div class="desc">{% if containers.available %}Runtime: {{ containers.runtime }} -- {{ containers.total }} total{% else %}No runtime installed{% endif %}</div>
+</div>
+
+<div style="display: flex; gap: 8px; margin-bottom: 16px;">
+ <button class="btn btn-sm btn-primary" id="tabContainers" onclick="switchTab('containers')">Containers</button>
+ <button class="btn btn-sm" id="tabCompose" onclick="switchTab('compose')">Compose Projects</button>
+</div>
+
+<div id="tab-containers">
+{% if containers.available %}
+<div class="card">
+ <div class="card-title">Running Containers ({{ containers.running | length }})</div>
+ {% if containers.containers %}
+ <table>
+ <thead><tr><th>ID/Name</th><th>Image</th><th>Status</th><th>Actions</th></tr></thead>
+ <tbody>
+ {% for c in containers.containers %}
+ <tr>
+ <td>{{ c.Names if c.Names else c.ID }}</td>
+ <td>{{ c.Image }}</td>
+ <td><span class="badge {% if c.Status.startswith('Up') or c.State == 'running' %}active{% else %}inactive{% endif %}">{{ c.Status if c.Status else c.State }}</span></td>
+ <td>
+  <button class="btn btn-sm" onclick="ctrAction('{{ c.ID or c.Id }}', 'stop')" title="Stop"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="6" width="12" height="12" rx="1"/></svg></button>
+  <button class="btn btn-sm" onclick="ctrAction('{{ c.ID or c.Id }}', 'restart')" title="Restart"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4 23 10 17 10"/><path d="M1 20 1 14 7 14"/></svg></button>
+ </td>
+ </tr>
+ {% endfor %}
+ </tbody>
+ </table>
+ {% else %}
+ <div style="color: var(--text-muted);">No containers</div>
+ {% endif %}
+</div>
+{% else %}
+<div class="card">
+ <div style="text-align: center; padding: 40px;">
+  <p>No container runtime detected. Install podman or docker:</p>
+  <code style="background: var(--bg); padding: 8px 12px; border-radius: 6px;">apt install podman</code>
+ </div>
+</div>
+{% endif %}
+</div>
+
+<div id="tab-compose" style="display:none;">
+{% if compose_projects %}
+<div class="grid grid-2">
+ {% for project in compose_projects %}
+ <div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <div>
+      <div class="card-title" style="margin: 0;">{{ project.name }}</div>
+      <div style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono); margin-top: 2px;">{{ project.dir }}</div>
+    </div>
+    <span class="badge {% if project.status == 'running' %}active{% elif project.status == 'stopped' %}inactive{% else %}{% endif %}">{{ project.status|upper }}</span>
+  </div>
+  <div style="display: flex; gap: 8px; margin-top: 12px;">
+    <button class="btn btn-sm btn-primary" onclick="composeAction('{{ project.dir }}', 'up')">Up</button>
+    <button class="btn btn-sm" onclick="composeAction('{{ project.dir }}', 'down')">Down</button>
+    <button class="btn btn-sm" onclick="composeAction('{{ project.dir }}', 'restart')">Restart</button>
+    <button class="btn btn-sm" onclick="composeAction('{{ project.dir }}', 'pull')">Pull</button>
+  </div>
+ </div>
+ {% endfor %}
+</div>
+{% else %}
+<div class="card">
+ <div style="color: var(--text-muted); text-align: center; padding: 40px;">
+  No docker-compose files found.<br>
+  <span style="font-size: 0.8rem;">Searched: /opt, /srv, /root, /home, /var/lib</span>
+ </div>
+</div>
+{% endif %}
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+function switchTab(tab) {
+ document.getElementById('tab-containers').style.display = tab === 'containers' ? '' : 'none';
+ document.getElementById('tab-compose').style.display = tab === 'compose' ? '' : 'none';
+ document.getElementById('tabContainers').classList.toggle('btn-primary', tab === 'containers');
+ document.getElementById('tabCompose').classList.toggle('btn-primary', tab === 'compose');
+}
+
+function ctrAction(id, action) {
+ if (!confirm(action + ' container ' + id + '?')) return;
+ fetch('/trazezzo/api/containers/' + id + '/' + action, { method: 'POST' })
+ .then(r => r.json())
+ .then(data => {
+  if (data.success !== false) { alert('Done'); location.reload(); }
+  else { alert('Failed: ' + (data.error || '')); }
+ });
+}
+
+function composeAction(projectDir, action) {
+ if (!confirm(action.toUpperCase() + ' compose project at ' + projectDir + '?')) return;
+ fetch('/trazezzo/api/compose/' + action, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ project_dir: projectDir })
+ })
+ .then(r => r.json())
+ .then(data => {
+  if (data.success) { alert(action.toUpperCase() + ' succeeded for ' + data.project); location.reload(); }
+  else { alert('Failed: ' + (data.error || data.stderr || '')); }
+ });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo -- Security{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>Security</h2>
+ <div class="desc">SELinux -- SSH keys -- Credential scan</div>
+</div>
+
+<div class="grid grid-2">
+ <div class="card">
+ <div class="card-title">SELinux</div>
+ {% if selinux.available %}
+ <table>
+ <tr><td>Mode</td><td><span class="badge {% if selinux.mode == 'Enforcing' %}active{% elif selinux.mode == 'Permissive' %}warn{% else %}inactive{% endif %}">{{ selinux.mode }}</span></td></tr>
+ {% for k, v in selinux.detailed.items() %}
+ <tr><td>{{ k }}</td><td>{{ v }}</td></tr>
+ {% endfor %}
+ </table>
+ {% else %}
+ <div style="color: var(--text-muted);">SELinux not installed</div>
+ {% endif %}
+ </div>
+
+ <div class="card">
+ <div class="card-title">SSH Host Keys</div>
+ {% if host_keys %}
+ <table>
+ <thead><tr><th>File</th><th>Type</th></tr></thead>
+ <tbody>
+ {% for k in host_keys %}
+ <tr><td>{{ k.file }}</td><td>{{ k.key_type }}</td></tr>
+ {% endfor %}
+ </tbody>
+ </table>
+ {% else %}
+ <div style="color: var(--text-muted);">No host keys found</div>
+ {% endif %}
+ </div>
+</div>
+
+<div class="card">
+ <div class="card-title">Authorized SSH Keys ({{ ssh_keys.count }})</div>
+ {% if ssh_keys.keys_list %}
+ <table>
+ <thead><tr><th>User</th><th>Type</th><th>Fingerprint</th><th>Comment</th></tr></thead>
+ <tbody>
+ {% for k in ssh_keys.keys_list %}
+ <tr>
+ <td><strong>{{ k.user }}</strong></td>
+ <td>{{ k.key_type }}</td>
+ <td style="font-family: monospace; font-size: 0.8rem;">{{ k.fingerprint }}</td>
+ <td>{{ k.comment }}</td>
+ </tr>
+ {% endfor %}
+ </tbody>
+ </table>
+ {% else %}
+ <div style="color: var(--text-muted);">No authorized keys found</div>
+ {% endif %}
+</div>
+
+<div class="card">
+ <div class="card-title">sshd Configuration</div>
+ <table>
+ {% for k, v in sshd_config.items() %}
+ <tr><td>{{ k }}</td><td>{{ v }}</td></tr>
+ {% endfor %}
+ </table>
+</div>
+
+<div class="card">
+ <div class="card-title">Credential Scanner ({{ credentials.credentials_found }} found -- {{ credentials.files_scanned }} files scanned)</div>
+ {% if credentials.credentials_found > 0 %}
+ <table>
+ <thead><tr><th>File</th><th>Line</th><th>Type</th><th>Masked Value</th><th>Context</th></tr></thead>
+ <tbody>
+ {% for c in credentials.findings %}
+ <tr>
+ <td style="font-family: monospace; font-size: 0.75rem;" title="{{ c.file }}">{{ c.file.split('/')[-1] }}</td>
+ <td>{{ c.line }}</td>
+ <td><span class="badge warn">{{ c.type }}</span></td>
+ <td style="font-family: monospace; font-size: 0.75rem;">{{ c.masked_value }}</td>
+ <td style="font-family: monospace; font-size: 0.72rem; color: var(--text-muted); max-width: 400px; overflow: hidden; text-overflow: ellipsis;">{{ c.context }}</td>
+ </tr>
+ {% endfor %}
+ </tbody>
+ </table>
+ <div style="margin-top: 8px; font-size: 0.75rem; color: var(--text-muted);">
+ Values are masked. Secret values are never exposed in the UI.
+ </div>
+ {% else %}
+ <div style="color: var(--success); padding: 12px;">No plaintext credentials detected in scanned paths.</div>
+ {% endif %}
+</div>
+{% endblock %}

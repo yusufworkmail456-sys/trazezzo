@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo — Cron Jobs{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>Cron Jobs</h2>
+ <div class="desc">Scheduled tasks — {{ cron.count }} entries</div>
+</div>
+
+<div class="grid grid-2">
+ <div class="card">
+  <div class="card-title">Add Cron Job</div>
+  <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 12px;">
+   <input type="text" id="cronSchedule" placeholder="Schedule (e.g. 0 3 * * * or @daily)" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-mono); font-size: 0.85rem;">
+   <input type="text" id="cronCommand" placeholder="Command (e.g. /opt/backup.sh)" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-mono); font-size: 0.85rem;">
+   <button class="btn btn-primary" onclick="addCron()">Add Job</button>
+  </div>
+  <div style="margin-top: 12px; font-size: 0.75rem; color: var(--text-muted);">
+   Schedule format: minute hour day month weekday<br>
+   Special: @reboot @yearly @monthly @weekly @daily @hourly
+  </div>
+ </div>
+
+ <div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+   <div class="card-title" style="margin: 0;">Current Jobs ({{ cron.count }})</div>
+   <button class="btn btn-sm" onclick="location.reload()">Refresh</button>
+  </div>
+  {% if cron.jobs %}
+  <div style="max-height: 400px; overflow-y: auto;">
+   <table style="width: 100%; font-size: 0.82rem;">
+    <thead><tr>
+     <th style="text-align: left; padding: 6px 8px;">Schedule</th>
+     <th style="text-align: left; padding: 6px 8px;">Command</th>
+     <th style="text-align: center; padding: 6px 8px;">Delete</th>
+    </tr></thead>
+    <tbody>
+     {% for job in cron.jobs %}
+     <tr style="border-bottom: 1px solid var(--border);">
+      <td style="padding: 4px 8px; font-family: var(--font-mono); white-space: nowrap;">{{ job.schedule }}</td>
+      <td style="padding: 4px 8px; font-family: var(--font-mono); font-size: 0.78rem; max-width: 300px; overflow: hidden; text-overflow: ellipsis;" title="{{ job.command }}">{{ job.command }}</td>
+      <td style="padding: 4px 8px; text-align: center;">
+       <button class="btn btn-sm" style="color: var(--error);" onclick="deleteCron({{ job.index }})">Delete</button>
+      </td>
+     </tr>
+     {% endfor %}
+    </tbody>
+   </table>
+  </div>
+  {% else %}
+  <div style="color: var(--text-muted); text-align: center; padding: 20px;">No cron jobs found</div>
+  {% endif %}
+ </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+function addCron() {
+ const schedule = document.getElementById('cronSchedule').value.trim();
+ const command = document.getElementById('cronCommand').value.trim();
+ if (!schedule || !command) { alert('Both schedule and command are required'); return; }
+ fetch('/trazezzo/api/cron/add', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ schedule, command })
+ })
+ .then(r => r.json())
+ .then(data => {
+  if (data.success) { alert('Cron job added'); location.reload(); }
+  else { alert(`Failed: ${data.error}`); }
+ });
+}
+
+function deleteCron(index) {
+ if (!confirm('Delete this cron job?')) return;
+ fetch(`/trazezzo/api/cron/delete/${index}`, { method: 'POST' })
+ .then(r => r.json())
+ .then(data => {
+  if (data.success) { alert('Cron job deleted'); location.reload(); }
+  else { alert(`Failed: ${data.error}`); }
+ });
+}
+</script>
+{% endblock %}

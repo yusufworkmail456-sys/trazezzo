@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo -- Access{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>Access</h2>
+ <div class="desc">{{ users | length }} login users -- {{ sessions | length }} active sessions -- {{ ssh_keys.count }} SSH keys</div>
+</div>
+
+<div style="display: flex; gap: 8px; margin-bottom: 16px;">
+ <button class="btn btn-sm btn-primary" id="tabUsers" onclick="switchTab('users')">Users &amp; Groups</button>
+ <button class="btn btn-sm" id="tabSessions" onclick="switchTab('sessions')">Sessions</button>
+ <button class="btn btn-sm" id="tabSSH" onclick="switchTab('ssh')">SSH Keys</button>
+</div>
+
+<div id="tab-users">
+<div class="grid grid-2">
+ <div class="card">
+  <div class="card-title">Login Users</div>
+  <table>
+   <thead><tr><th>Username</th><th>UID</th><th>Shell</th><th>Home</th></tr></thead>
+   <tbody>
+   {% for u in users %}
+   <tr>
+    <td><strong>{{ u.username }}</strong></td>
+    <td>{{ u.uid }}</td>
+    <td>{{ u.shell }}</td>
+    <td>{{ u.home }}</td>
+   </tr>
+   {% endfor %}
+   </tbody>
+  </table>
+ </div>
+ <div class="card">
+  <div class="card-title">Groups</div>
+  <table>
+   <thead><tr><th>Name</th><th>GID</th><th>Members</th></tr></thead>
+   <tbody>
+   {% for g in groups %}
+   <tr>
+    <td><strong>{{ g.name }}</strong></td>
+    <td>{{ g.gid }}</td>
+    <td>{{ g.members | join(', ') }}</td>
+   </tr>
+   {% endfor %}
+   </tbody>
+  </table>
+ </div>
+</div>
+</div>
+
+<div id="tab-sessions" style="display:none;">
+<div class="card">
+ <div class="card-title">Active Sessions</div>
+ {% if sessions %}
+ <table>
+  <thead><tr><th>Session</th><th>User</th><th>Seat</th></tr></thead>
+  <tbody>
+  {% for s in sessions %}
+  <tr>
+   <td>{{ s.session }}</td>
+   <td><strong>{{ s.user }}</strong></td>
+   <td>{{ s.seat }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+ </table>
+ {% else %}
+ <div style="color: var(--text-muted);">No active login sessions</div>
+ {% endif %}
+</div>
+</div>
+
+<div id="tab-ssh" style="display:none;">
+<div class="card">
+ <div class="card-title">Authorized SSH Keys ({{ ssh_keys.count }})</div>
+ {% if ssh_keys.keys_list %}
+ <table>
+  <thead><tr><th>User</th><th>Type</th><th>Fingerprint</th><th>Comment</th></tr></thead>
+  <tbody>
+  {% for k in ssh_keys.keys_list %}
+  <tr>
+   <td><strong>{{ k.user }}</strong></td>
+   <td>{{ k.key_type }}</td>
+   <td style="font-family: monospace; font-size: 0.8rem;">{{ k.fingerprint }}</td>
+   <td>{{ k.comment }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+ </table>
+ {% else %}
+ <div style="color: var(--text-muted);">No authorized keys found</div>
+ {% endif %}
+</div>
+<div class="card">
+ <div class="card-title">SSH Host Keys</div>
+ {% if host_keys %}
+ <table>
+  <thead><tr><th>File</th><th>Type</th></tr></thead>
+  <tbody>
+  {% for k in host_keys %}
+  <tr><td>{{ k.file }}</td><td>{{ k.key_type }}</td></tr>
+  {% endfor %}
+  </tbody>
+ </table>
+ {% else %}
+ <div style="color: var(--text-muted);">No host keys found</div>
+ {% endif %}
+</div>
+<div class="card">
+ <div class="card-title">sshd Configuration</div>
+ <table>
+  {% for k, v in sshd_config.items() %}
+  <tr><td>{{ k }}</td><td>{{ v }}</td></tr>
+  {% endfor %}
+ </table>
+</div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+function switchTab(tab) {
+ ['users', 'sessions', 'ssh'].forEach(t => {
+  document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
+  document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('btn-primary', t === tab);
+ });
+}
+</script>
+{% endblock %}

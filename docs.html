@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trazezzo — Documentation</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'><rect width='36' height='36' rx='9' fill='%2306a284'/><path d='M8 14 L14 14 L16 9 L18 19 L20 14 L28 14' stroke='white' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/><path d='M18 19 L18 27' stroke='white' stroke-width='2' fill='none' stroke-linecap='round'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --primary:#06a284; --primary-dark:#048566; --primary-light:#e6f7f3;
+  --ink:#0b1120; --text:#1e293b; --muted:#64748b; --muted-light:#94a3b8;
+  --surface:#ffffff; --bg:#f8fafc; --border:#e2e8f0; --border-light:#f1f5f9;
+  --code-bg:#0b1120; --code-surface:#1e293b; --code-text:#e2e8f0; --code-muted:#64748b;
+  --success:#22c55e; --warning:#f59e0b; --danger:#ef4444;
+  --radius:14px; --radius-sm:10px; --radius-xs:6px;
+  --font-display:'Space Grotesk',system-ui,sans-serif;
+  --font-body:'Inter',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono','SF Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--primary);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ── Layout ──────────────────────── */
+.layout{display:flex;min-height:100vh}
+
+/* ── Sidebar TOC ─────────────────── */
+.toc{
+  width:280px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);
+  position:fixed;height:100vh;overflow-y:auto;padding:24px 0;z-index:50;
+}
+.toc-header{padding:0 24px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.toc-header .logo-mark{width:28px;height:28px}
+.toc-header .logo-text{font-family:var(--font-display);font-size:1.1rem;font-weight:700;color:var(--ink);letter-spacing:-.02em}
+.toc-header .doc-badge{font-family:var(--font-mono);font-size:.6rem;color:var(--muted-light);background:var(--bg);padding:2px 8px;border-radius:99px;margin-left:auto}
+.toc-search{padding:16px 24px 12px}
+.toc-search input{width:100%;padding:8px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.82rem;font-family:var(--font-body);background:var(--bg);transition:border-color .15s}
+.toc-search input:focus{outline:none;border-color:var(--primary);background:var(--surface)}
+.toc-nav{padding:8px 12px}
+.toc-section{font-family:var(--font-mono);font-size:.66rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-light);padding:16px 12px 6px}
+.toc-item{display:block;padding:6px 12px;font-size:.84rem;color:var(--text);border-radius:var(--radius-sm);transition:all .12s;line-height:1.4;cursor:pointer}
+.toc-item:hover{background:var(--bg);color:var(--primary);text-decoration:none}
+.toc-item.active{background:var(--primary-light);color:var(--primary);font-weight:600}
+.toc-item.sub{padding-left:28px;font-size:.8rem;color:var(--muted)}
+
+/* ── Content ─────────────────────── */
+.content{margin-left:280px;flex:1;padding:48px 56px;max-width:900px;min-width:0}
+.content-header{margin-bottom:48px;padding-bottom:24px;border-bottom:1px solid var(--border)}
+.content-header h1{font-family:var(--font-display);font-size:2.4rem;font-weight:700;color:var(--ink);letter-spacing:-.03em;margin-bottom:8px}
+.content-header .desc{font-size:1.05rem;color:var(--muted)}
+.breadcrumb{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--muted-light);margin-bottom:16px;font-family:var(--font-mono)}
+.breadcrumb a{color:var(--muted)}
+
+/* ── Sections ────────────────────── */
+.section{margin-bottom:56px;scroll-margin-top:24px}
+.section h2{font-family:var(--font-display);font-size:1.6rem;font-weight:700;color:var(--ink);letter-spacing:-.02em;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid var(--border-light)}
+.section h3{font-family:var(--font-display);font-size:1.2rem;font-weight:600;color:var(--ink);margin:28px 0 12px;letter-spacing:-.01em}
+.section h4{font-size:1rem;font-weight:600;color:var(--text);margin:20px 0 8px}
+.section p{margin-bottom:14px;font-size:.92rem;line-height:1.7;color:var(--text)}
+.section ul,.section ol{margin:0 0 16px 20px}
+.section li{margin-bottom:6px;font-size:.92rem;line-height:1.6}
+.section strong{color:var(--ink);font-weight:600}
+
+/* ── Code blocks ─────────────────── */
+.code-block{background:var(--code-bg);border-radius:var(--radius-sm);overflow:hidden;margin:16px 0;border:1px solid #1e293b}
+.code-header{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--code-surface);border-bottom:1px solid #334155}
+.code-header .lang{font-family:var(--font-mono);font-size:.72rem;color:var(--code-muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.code-header .copy-btn{background:none;border:none;color:var(--code-muted);cursor:pointer;font-size:.72rem;font-family:var(--font-mono);transition:color .15s;display:flex;align-items:center;gap:4px}
+.code-header .copy-btn:hover{color:var(--code-text)}
+.code-body{padding:16px 20px;overflow-x:auto}
+.code-body pre{font-family:var(--font-mono);font-size:.82rem;line-height:1.65;color:var(--code-text);white-space:pre}
+.code-body .kw{color:#c084fc}
+.code-body .str{color:#86efac}
+.code-body .com{color:var(--code-muted);font-style:italic}
+.code-body .num{color:#fbbf24}
+.code-body .var{color:#7dd3fc}
+.inline-code{font-family:var(--font-mono);font-size:.84rem;background:var(--primary-light);color:var(--primary-dark);padding:2px 8px;border-radius:4px}
+
+/* ── Callouts ─────────────────────── */
+.callout{padding:16px 20px;border-radius:var(--radius-sm);margin:16px 0;font-size:.88rem;line-height:1.6;border-left:3px solid;display:flex;gap:12px;align-items:flex-start}
+.callout .icon{flex-shrink:0;width:20px;height:20px;margin-top:1px}
+.callout .body{flex:1}
+.callout .body strong{display:block;margin-bottom:4px}
+.callout.info{background:#eff6ff;border-color:#3b82f6;color:#1e40af}
+.callout.warn{background:#fffbeb;border-color:#f59e0b;color:#92400e}
+.callout.danger{background:#fef2f2;border-color:#ef4444;color:#991b1b}
+.callout.tip{background:var(--primary-light);border-color:var(--primary);color:var(--primary-dark)}
+
+/* ── Tables ──────────────────────── */
+.spec-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.88rem}
+.spec-table th{text-align:left;padding:10px 16px;background:var(--surface);border-bottom:2px solid var(--border);color:var(--muted);font-weight:600;font-size:.76rem;text-transform:uppercase;letter-spacing:.04em}
+.spec-table td{padding:10px 16px;border-bottom:1px solid var(--border-light);vertical-align:top}
+.spec-table td:first-child{font-weight:600;color:var(--ink);white-space:nowrap}
+.spec-table tr:hover{background:var(--surface)}
+
+/* ── Cards ───────────────────────── */
+.info-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin:16px 0}
+.info-card h4{font-family:var(--font-display);font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:8px}
+.info-card .card-desc{font-size:.86rem;color:var(--muted);margin-bottom:16px}
+
+/* ── Mode comparison ─────────────── */
+.mode-compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}
+.mode-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px}
+.mode-col h4{font-family:var(--font-display);font-size:1.05rem;font-weight:600;margin-bottom:4px}
+.mode-col .mode-tag{display:inline-block;font-family:var(--font-mono);font-size:.68rem;font-weight:600;padding:3px 10px;border-radius:99px;margin-bottom:14px;text-transform:uppercase;letter-spacing:.04em}
+.mode-col .mode-tag.calm{background:#f1f5f9;color:var(--muted)}
+.mode-col .mode-tag.aggr{background:var(--primary-light);color:var(--primary-dark)}
+.mode-col ul{margin:0;padding-left:18px}
+.mode-col li{font-size:.84rem;margin-bottom:5px;line-height:1.5}
+
+/* ── Steps ──────────────────────── */
+.step{display:flex;gap:16px;margin-bottom:20px}
+.step-num{flex-shrink:0;width:28px;height:28px;background:var(--primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:.82rem;font-weight:700;margin-top:1px}
+.step-body{flex:1}
+.step-body h4{font-size:.95rem;font-weight:600;color:var(--ink);margin-bottom:4px}
+.step-body p{font-size:.88rem;margin-bottom:8px}
+
+/* ── Badge ───────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:99px;font-size:.72rem;font-weight:600;font-family:var(--font-mono)}
+.badge.req{background:#dcfce7;color:#166534}
+.badge.opt{background:#f1f5f9;color:#64748b}
+.badge.pro{background:var(--primary-light);color:var(--primary-dark)}
+
+/* ── Scrollbar ───────────────────── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+
+/* ── Responsive ──────────────────── */
+@media(max-width:960px){
+  .toc{display:none}
+  .content{margin-left:0;padding:32px 20px}
+  .mode-compare{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ── TOC Sidebar ─────────────────── -->
+<aside class="toc">
+  <div class="toc-header">
+    <svg class="logo-mark" viewBox="0 0 36 36" fill="none">
+      <rect width="36" height="36" rx="9" fill="#06a284"/>
+      <path d="M8 14 L14 14 L16 9 L18 19 L20 14 L28 14" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M18 19 L18 27" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </svg>
+    <span class="logo-text">Trazezzo</span>
+    <span class="doc-badge">docs</span>
+  </div>
+  <div class="toc-search">
+    <input type="text" placeholder="Search docs..." id="tocSearch" oninput="filterToc()">
+  </div>
+  <nav class="toc-nav" id="tocNav">
+    <div class="toc-section">Getting Started</div>
+    <a class="toc-item" href="#intro">Introduction</a>
+    <a class="toc-item" href="#architecture">Architecture</a>
+    <div class="toc-section">Installation</div>
+    <a class="toc-item" href="#requirements">System Requirements</a>
+    <a class="toc-item" href="#deploy-bundle">Bundle Mode</a>
+    <a class="toc-item" href="#deploy-separated">Separated Mode</a>
+    <a class="toc-item" href="#roadmap">Roadmap: Multi-Server</a>
+    <a class="toc-item" href="#nginx">Nginx Reverse Proxy</a>
+    <div class="toc-section">AI Agent</div>
+    <a class="toc-item" href="#ai-setup">LLM Configuration</a>
+    <a class="toc-item" href="#proactive-modes">Proactive Modes</a>
+    <a class="toc-item" href="#allowlist">Allowlist &amp; Safety</a>
+    <div class="toc-section">Reference</div>
+    <a class="toc-item" href="#config">Configuration</a>
+    <a class="toc-item" href="#api">API Endpoints</a>
+    <a class="toc-item" href="#cli">CLI Commands</a>
+  </nav>
+</aside>
+
+<!-- ── Main Content ────────────────── -->
+<main class="content">
+
+<div class="content-header">
+  <div class="breadcrumb">
+    <a href="/trazezzo-landing/">Trazezzo</a>
+    <span>/</span>
+    <span>Documentation</span>
+  </div>
+  <h1>Documentation</h1>
+  <p class="desc">Trace everything. Fix anything. Panduan lengkap instalasi, deployment, dan konfigurasi Trazezzo — AI-native server operations platform.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- INTRODUCTION -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="intro">
+  <h2>Introduction</h2>
+  <p>Trazezzo adalah platform operasi server bertenaga AI yang menggabungkan tiga komponen utama:</p>
+  <ul>
+    <li><strong>Dashboard</strong> — web UI (FastAPI + Jinja2) untuk monitoring real-time, kelola services, logs, networking, storage, containers, security, dan lebih.</li>
+    <li><strong>Agent Daemon</strong> — background process yang menjalankan capture sources (journald, auditd, psutil, eBPF) dan proactive loop untuk deteksi anomali.</li>
+    <li><strong>AI Chatbot</strong> — asisten AI dengan dua mode: Q&amp;A (reasoning) dan Agent (eksekusi command langsung di server).</li>
+  </ul>
+
+  <div class="callout tip">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+    <div class="body">
+      <strong>Design Philosophy</strong>
+      Trazezzo berjalan sebagai satu proses (bundle mode) atau terpisah (dashboard &amp; agent terpisah pada mesin yang sama). Semua capture berbasis async I/O — tidak ada blocking operation. Agent proactive loop berjalan setiap 30 detik. Multi-server deployment (agent di VM berbeda, dashboard di VM pusat) sedang dalam pengembangan — lihat <a href="#roadmap">Roadmap</a>.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- ARCHITECTURE -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="architecture">
+  <h2>Architecture</h2>
+  <p>Trazezzo terdiri dari layer-layer berikut:</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="lang">Architecture</span>
+      <button class="copy-btn" onclick="copyCode(this)">copy</button>
+    </div>
+    <div class="code-body">
+<pre><span class="com">┌─────────────────────────────────────────────────────────┐</span>
+<span class="com">│                     Nginx Reverse Proxy                   │</span>
+<span class="com">│                    /trazezzo/ → :9122                     │</span>
+<span class="com">└──────────────────────┬──────────────────────────────────┘</span>
+                       <span class="com">│</span>
+<span class="com">┌──────────────────────▼──────────────────────────────────┐</span>
+<span class="com">│                  Trazezzo Process                         │</span>
+<span class="com">│                                                           │</span>
+<span class="com">│  ┌─────────────┐    ┌──────────────┐    ┌─────────────┐ │</span>
+<span class="com">│  │  Dashboard   │    │ Agent Daemon │    │  AI Chatbot  │ │</span>
+<span class="com">│  │  (FastAPI)  │    │  (async loop)│    │  (LLM proxy) │ │</span>
+<span class="com">│  │  :9122      │    │              │    │              │ │</span>
+<span class="com">│  └──────┬──────┘    └──────┬───────┘    └──────┬──────┘ │</span>
+<span class="com">│         │                  │                   │        │</span>
+<span class="com">│         └──────────┬───────┴───────────┬───────┘        │</span>
+<span class="com">│                    │                   │                │</span>
+<span class="com">│           ┌────────▼────────┐  ┌────────▼────────┐       │</span>
+<span class="com">│           │  SQLite (warm)  │  │  9router (LLM)  │       │</span>
+<span class="com">│           │  /var/lib/      │  │  OpenAI-compat  │       │</span>
+<span class="com">│           │  trazezzo/      │  │  API            │       │</span>
+<span class="com">│           └─────────────────┘  └─────────────────┘       │</span>
+<span class="com">│                                                           │</span>
+<span class="com">│  Capture Sources (async coroutines):                      │</span>
+<span class="com">│  ├── journald  (systemd journal reader)                    │</span>
+<span class="com">│  ├── auditd    (kernel audit events)                      │</span>
+<span class="com">│  ├── psutil    (CPU/RAM/disk/net metrics, 5s interval)     │</span>
+<span class="com">│  └── eBPF      (kernel syscall tracing, optional)          │</span>
+<span class="com">│                                                           │</span>
+<span class="com">│  Proactive Loop (30s interval):                            │</span>
+<span class="com">│  ├── Detect: failed services, CPU/mem spikes, disk full   │</span>
+<span class="com">│  ├── Calm mode:   advisory (recommendations only)         │</span>
+<span class="com">│  └── Aggressive:  auto-remediate via allowlist + approval │</span>
+<span class="com">└───────────────────────────────────────────────────────────┘</span></pre>
+    </div>
+  </div>
+
+  <p>Dashboard dan Agent berbagi satu proses Python di <strong>bundle mode</strong> (default). Di <strong>separated mode</strong>, keduanya berjalan sebagai proses terpisah pada <strong>mesin yang sama</strong> dengan shared SQLite database. Agent dan dashboard harus berada di VM/server yang sama — multi-server deployment belum tersedia saat ini.</p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SYSTEM REQUIREMENTS -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="requirements">
+  <h2>System Requirements</h2>
+
+  <h3>Minimum Specifications</h3>
+  <table class="spec-table">
+    <thead>
+      <tr><th width="30%">Component</th><th>Requirement</th><th width="15%">Type</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>OS</td>
+        <td>Linux (Ubuntu 22.04+ / Debian 12+ / RHEL 9+ recommended). systemd required.</td>
+        <td><span class="badge req">Required</span></td>
+      </tr>
+      <tr>
+        <td>Python</td>
+        <td>3.12 atau lebih baru <span class="inline-code">requires-python = "&gt;=3.12"</span></td>
+        <td><span class="badge req">Required</span></td>
+      </tr>
+      <tr>
+        <td>Kernel</td>
+        <td>5.8+ (untuk eBPF). Tanpa eBPF, kernel apapun yang mendukung systemd.</td>
+        <td><span class="badge opt">eBPF: 5.8+</span></td>
+      </tr>
+      <tr>
+        <td>RAM</td>
+        <td>512MB minimum. 1GB+ recommended untuk production dengan eBPF.</td>
+        <td><span class="badge req">Required</span></td>
+      </tr>
+      <tr>
+        <td>Disk</td>
+        <td>100MB untuk instalasi. Database grow ~10-50MB/hari tergantung traffic.</td>
+        <td><span class="badge req">Required</span></td>
+      </tr>
+      <tr>
+        <td>Nginx</td>
+        <td>Reverse proxy untuk HTTPS, WebSocket, dan SSE support.</td>
+        <td><span class="badge req">Required</span></td>
+      </tr>
+      <tr>
+        <td>auditd</td>
+        <td>Kernel audit daemon untuk security event capture.</td>
+        <td><span class="badge req">Required</span></td>
+      </tr>
+      <tr>
+        <td>bpftrace</td>
+        <td>Untuk eBPF kernel syscall tracing. <span class="inline-code">apt install bpftrace python3-bpfcc</span></td>
+        <td><span class="badge opt">Optional</span></td>
+      </tr>
+      <tr>
+        <td>Root</td>
+        <td>Akses root untuk auditd, eBPF (CAP_BPF), dan service management.</td>
+        <td><span class="badge req">Required</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Python Dependencies</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="lang">pyproject.toml</span>
+      <button class="copy-btn" onclick="copyCode(this)">copy</button>
+    </div>
+    <div class="code-body">
+<pre>dependencies = [
+    <span class="str">"fastapi&gt;=0.115"</span>,       <span class="com"># Web framework</span>
+    <span class="str">"uvicorn[standard]&gt;=0.32"</span>, <span class="com"># ASGI server</span>
+    <span class="str">"jinja2&gt;=3.1"</span>,           <span class="com"># HTML templates</span>
+    <span class="str">"httpx&gt;=0.28"</span>,            <span class="com"># LLM API client</span>
+    <span class="str">"pydantic&gt;=2.10"</span>,        <span class="com"># Data validation</span>
+    <span class="str">"psutil&gt;=6.1"</span>,            <span class="com"># System metrics</span>
+    <span class="str">"websockets&gt;=14"</span>,        <span class="com"># Web terminal + exec stream</span>
+]</pre>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div class="body">
+      <strong>eBPF Kernel Requirement</strong>
+      eBPF capture butuh kernel &gt;= 5.8 dan bpftrace terinstall. Tanpa itu, Trazezzo tetap berfungsi penuh — hanya tanpa kernel-level syscall tracing. eBPF import akan silently skip jika bcc/bpftrace tidak tersedia.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- DEPLOYMENT: BUNDLE MODE -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="deploy-bundle">
+  <h2>Deployment: Bundle Mode</h2>
+  <p>Mode default — dashboard dan agent berjalan dalam satu proses Python via <span class="inline-code">daemon_entry.py</span>. Paling simple, paling sedikit config. Recommended untuk single-server deployment.</p>
+
+  <div class="mode-compare">
+    <div class="mode-col">
+      <span class="mode-tag calm">Bundle</span>
+      <h4>Single Process</h4>
+      <ul>
+        <li>Dashboard + Agent di 1 proses</li>
+        <li>1 systemd service</li>
+        <li>Shared memory, no IPC</li>
+        <li>Simplest deployment</li>
+      </ul>
+    </div>
+    <div class="mode-col">
+      <span class="mode-tag aggr">Separated</span>
+      <h4>Two Processes</h4>
+      <ul>
+        <li>Dashboard dan Agent proses terpisah</li>
+        <li>2 systemd services</li>
+        <li>Shared SQLite database</li>
+        <li>Independent restart/scaling</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Step-by-Step: Bundle Mode</h3>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h4>Clone repository</h4>
+      <div class="code-block">
+        <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <div class="code-body"><pre>git clone https://github.com/yusufworkmail456-sys/trazezzo.git
+<span class="builtin">cd</span> trazezzo</pre></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h4>Create virtualenv &amp; install dependencies</h4>
+      <div class="code-block">
+        <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <div class="code-body"><pre>python3 -m venv .venv
+<span class="builtin">source</span> .venv/bin/activate
+pip install -e .</pre></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h4>Install system packages</h4>
+      <p>auditd untuk security event capture. bpftrace optional untuk eBPF.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <div class="code-body"><pre><span class="com"># Required</span>
+apt-get install -y auditd audispd-plugins
+systemctl enable --now auditd
+
+<span class="com"># Optional: eBPF kernel tracing</span>
+apt-get install -y bpftrace python3-bpfcc</pre></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h4>Create data directory</h4>
+      <div class="code-block">
+        <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <div class="code-body"><pre>mkdir -p /var/lib/trazezzo</pre></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <h4>Create systemd service</h4>
+      <p>Bundle mode menjalankan <span class="inline-code">daemon_entry.py</span> yang start agent + dashboard dalam satu proses.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="lang">/etc/systemd/system/trazezzo.service</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <div class="code-body"><pre>[Unit]
+Description=Trazezzo — AI-Native Server Operations Platform
+After=network.target auditd.service
+
+[Service]
+Type=simple
+ExecStart=/opt/trazezzo/.venv/bin/python -m trazezzo.daemon_entry
+Restart=on-failure
+RestartSec=5
+Environment=TRAZEZZO_DATA_DIR=/var/lib/trazezzo
+Environment=PYTHONUNBUFFERED=1
+WorkingDirectory=/opt/trazezzo
+User=root
+
+[Install]
+WantedBy=multi-user.target</pre></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">6</div>
+    <div class="step-body">
+      <h4>Enable &amp; start service</h4>
+      <div class="code-block">
+        <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <div class="code-body"><pre>systemctl daemon-reload
+systemctl enable --now trazezzo
+systemctl status trazezzo</pre></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">7</div>
+    <div class="step-body">
+      <h4>Verify</h4>
+      <div class="code-block">
+        <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <div class="code-body"><pre><span class="com"># Check service</span>
+systemctl is-active trazezzo
+
+<span class="com"># Check API</span>
+curl http://localhost:9122/api/overview
+
+<span class="com"># Check logs</span>
+journalctl -u trazezzo -f</pre></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 L3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    <div class="body">
+      <strong>Quick Install</strong>
+      Trazezzo memiliki CLI yang automate steps 2-6: <span class="inline-code">trazezzo init</span> lalu <span class="inline-code">trazezzo up</span>. Lihat <a href="#cli">CLI Commands</a> untuk detail.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- DEPLOYMENT: SEPARATED MODE -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="deploy-separated">
+  <h2>Deployment: Separated Mode</h2>
+  <p>Mode untuk deployment yang lebih fleksibel — dashboard dan agent berjalan sebagai proses terpisah pada <strong>mesin yang sama</strong>. Berguna ketika agent butuh resource lebih (eBPF) atau ingin restart dashboard tanpa disconnect capture. Tidak untuk multi-server — agent dan dashboard harus tetap di VM yang sama.</p>
+
+  <h3>Step-by-Step: Separated Mode</h3>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h4>Follow bundle mode steps 1-4</h4>
+      <p>Clone, venv, system packages, data directory — sama seperti bundle mode.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h4>Create agent-only systemd service</h4>
+      <p>Agent daemon berjalan standalone via <span class="inline-code">AgentDaemon.run()</span>.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="lang">/etc/systemd/system/trazezzo-agent.service</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <div class="code-body"><pre>[Unit]
+Description=Trazezzo Agent — Capture &amp; Proactive Daemon
+After=network.target auditd.service
+
+[Service]
+Type=simple
+ExecStart=/opt/trazezzo/.venv/bin/python -c <span class="str">"\
+from trazezzo.agent.daemon import AgentDaemon; \
+import asyncio; asyncio.run(AgentDaemon().run())"</span>
+Restart=on-failure
+RestartSec=5
+Environment=TRAZEZZO_DATA_DIR=/var/lib/trazezzo
+Environment=PYTHONUNBUFFERED=1
+WorkingDirectory=/opt/trazezzo
+User=root
+
+[Install]
+WantedBy=multi-user.target</pre></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h4>Create dashboard-only systemd service</h4>
+      <p>Dashboard berjalan standalone via uvicorn, tanpa agent daemon.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="lang">/etc/systemd/system/trazezzo-dashboard.service</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <div class="code-body"><pre>[Unit]
+Description=Trazezzo Dashboard — Web UI
+After=network.target trazezzo-agent.service
+
+[Service]
+Type=simple
+ExecStart=/opt/trazezzo/.venv/bin/uvicorn \
+    trazezzo.dashboard.app:app \
+    --host 127.0.0.1 \
+    --port 9122
+Restart=on-failure
+RestartSec=5
+Environment=TRAZEZZO_DATA_DIR=/var/lib/trazezzo
+Environment=PYTHONUNBUFFERED=1
+WorkingDirectory=/opt/trazezzo
+User=root
+
+[Install]
+WantedBy=multi-user.target</pre></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h4>Enable &amp; start both services</h4>
+      <div class="code-block">
+        <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <div class="code-body"><pre>systemctl daemon-reload
+systemctl enable --now trazezzo-agent
+systemctl enable --now trazezzo-dashboard
+
+<span class="com"># Verify both</span>
+systemctl status trazezzo-agent
+systemctl status trazezzo-dashboard</pre></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout info">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    <div class="body">
+      <strong>Shared Database</strong>
+      Kedua service share <span class="inline-code">/var/lib/trazezzo/events.db</span> (SQLite). Agent menulis events, dashboard membaca. SQLite handle concurrent read/write dengan WAL mode. Pastikan <span class="inline-code">TRAZEZZO_DATA_DIR</span> sama di kedua service.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- ROADMAP: MULTI-SERVER -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="roadmap">
+  <h2>Roadmap: Multi-Server Deployment</h2>
+  <p>Saat ini Trazezzo beroperasi pada <strong>single VM/server</strong> — agent dan dashboard harus berada di mesin yang sama. Berikut rencana untuk multi-server deployment:</p>
+
+  <div class="callout info">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    <div class="body">
+      <strong>Current Limitation</strong>
+      Agent menulis events ke SQLite lokal (<span class="inline-code">/var/lib/trazezzo/events.db</span>). Dashboard membaca dari SQLite yang sama. Tidak ada remote ingestion API atau mekanisme agent-to-dashboard antar VM. Multi-server deployment membutuhkan perubahan arsitektur.
+    </div>
+  </div>
+
+  <h3>Rencana Arsitektur Multi-Server</h3>
+  <p>Tiga pendekatan yang sedang dievaluasi:</p>
+
+  <div class="mode-compare">
+    <div class="mode-col">
+      <h4>1. PostgreSQL Backend (Recommended)</h4>
+      <p>Semua agent (di setiap server) dan dashboard connect ke PostgreSQL database terpusat. Agent menulis events langsung ke Postgres, dashboard membaca dari sana.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="lang">config</span></div>
+        <div class="code-body"><pre><span class="com"># /etc/trazezzo/.env</span>
+TRAZEZZO_DB_TYPE=postgresql
+TRAZEZZO_DB_URL=postgresql://trazezzo:***@db.internal:5432/trazezzo</pre></div>
+      </div>
+      <p><strong>Status:</strong> Dalam pengembangan</p>
+    </div>
+    <div class="mode-col">
+      <h4>2. Agent HTTP Forwarding</h4>
+      <p>Agent di remote server mengirim events via HTTP POST ke dashboard API. Dashboard menyimpan ke SQLite lokalnya.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="lang">config</span></div>
+        <div class="code-body"><pre><span class="com"># /etc/trazezzo/.env (di agent server)</span>
+TRAZEZZO_DASHBOARD_URL=https://dashboard.internal/trazezzo
+TRAZEZZO_AGENT_TOKEN=***</pre></div>
+      </div>
+      <p><strong>Status:</strong> Dalam pengembangan</p>
+    </div>
+  </div>
+
+  <h3>Hybrid Deployment (Concept)</h3>
+  <p>Untuk skenario dengan 3+ server aplikasi:</p>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">architecture</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com">┌─────────────────────────────────────────────────────────┐</span>
+<span class="com">│  Server A (Dashboard + Agent)     ← Bundle mode         │</span>
+<span class="com">│  ├── Trazezzo Dashboard (port 9122)                      │</span>
+<span class="com">│  ├── Agent Daemon (local capture)                      │</span>
+<span class="com">│  └── SQLite/PostgreSQL (local events)                   │</span>
+<span class="com">│                                                         │</span>
+<span class="com">│  Server B (Agent only)            ← Remote agent       │</span>
+<span class="com">│  ├── Agent Daemon (local capture)                      │</span>
+<span class="com">│  └── Forward events → Server A via HTTP/DB             │</span>
+<span class="com">│                                                         │</span>
+<span class="com">│  Server C (Agent only)            ← Remote agent       │</span>
+<span class="com">│  ├── Agent Daemon (local capture)                      │</span>
+<span class="com">│  └── Forward events → Server A via HTTP/DB             │</span>
+<span class="com">└─────────────────────────────────────────────────────────┘</span></pre></div>
+  </div>
+
+  <div class="callout warn">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div class="body">
+      <strong>Belum Tersedia</strong>
+      Multi-server deployment membutuhkan perubahan pada <span class="inline-code">config.py</span> (DB backend abstraction) dan <span class="inline-code">sqlite_warm.py</span> (Postgres adapter). Jika Anda ingin contribute atau track progress, cek GitHub repository.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- NGINX -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="nginx">
+  <h2>Nginx Reverse Proxy</h2>
+  <p>Nginx diperlukan untuk HTTPS termination, WebSocket support (web terminal + exec stream), dan SSE streaming (AI chatbot).</p>
+
+  <h3>Nginx Configuration</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">/etc/nginx/snippets/trazezzo.conf</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Trazezzo — AI-Native Server Operations</span>
+location /trazezzo/ {
+    proxy_pass http://127.0.0.1:9122/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    <span class="com"># WebSocket support (terminal + exec stream)</span>
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection <span class="str">"upgrade"</span>;
+    proxy_read_timeout 86400;
+    proxy_send_timeout 86400;
+
+    <span class="com"># SSE streaming (chatbot responses)</span>
+    proxy_buffering off;
+    proxy_cache off;
+}</pre></div>
+  </div>
+
+  <h3>Include in server block</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">nginx site config</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre>server {
+    listen 443 ssl http2;
+    server_name your-domain.com;
+
+    <span class="com"># ... SSL config ...</span>
+
+    include snippets/trazezzo.conf;
+
+    location / {
+        <span class="com"># your default backend</span>
+    }
+}</pre></div>
+  </div>
+
+  <div class="callout warn">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div class="body">
+      <strong>Critical Settings</strong>
+      <span class="inline-code">proxy_buffering off</span> wajib — tanpa ini, AI chatbot streaming tidak akan bekerja. <span class="inline-code">proxy_read_timeout 86400</span> wajib untuk WebSocket terminal agar tidak disconnect setelah 60s.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- AI AGENT SETUP -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="ai-setup">
+  <h2>AI Agent Setup</h2>
+  <p>Trazezzo AI chatbot menggunakan OpenAI-compatible API. Ada dua cara untuk mengkonfigurasi LLM backend:</p>
+
+  <div class="mode-compare">
+    <div class="mode-col">
+      <span class="mode-tag aggr">Recommended</span>
+      <h4>9Router</h4>
+      <p style="font-size:.84rem;color:var(--muted);margin-bottom:14px">Managed LLM gateway. No API key management. Setup cepat.</p>
+      <ul>
+        <li>Zero-config API key routing</li>
+        <li>Multi-model access via satu endpoint</li>
+        <li>Buka <a href="https://9router.com" target="_blank">9router.com</a> untuk setup</li>
+      </ul>
+    </div>
+    <div class="mode-col">
+      <span class="mode-tag calm">Flexible</span>
+      <h4>Bring Your Own Model</h4>
+      <p style="font-size:.84rem;color:var(--muted);margin-bottom:14px">Gunakan provider LLM sendiri. OpenAI-compatible.</p>
+      <ul>
+        <li>OpenAI, Anthropic, Ollama, vLLM, dll</li>
+        <li>Full kontrol model &amp; cost</li>
+        <li>On-premise / self-hosted support</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Option A: 9Router (Recommended)</h3>
+  <p><a href="https://9router.com" target="_blank">9Router</a> adalah managed LLM gateway yang menyediakan akses ke berbagai model melalui satu endpoint yang OpenAI-compatible. Setup akun di 9router.com, dapatkan API key, lalu konfigurasi Trazezzo:</p>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h4>Buat akun di 9router.com</h4>
+      <p>Kunjungi <a href="https://9router.com" target="_blank">https://9router.com</a> untuk registrasi dan dapatkan API key Anda.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h4>Store API key</h4>
+      <p>Trazezzo membaca API key dari file env (bukan environment variable):</p>
+      <div class="code-block">
+        <div class="code-header"><span class="lang">/etc/trazezzo/.env</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <div class="code-body"><pre>NINEROUTER_API_KEY=sk-your-9router-api-key-here</pre></div>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <div class="code-body"><pre>mkdir -p /etc/trazezzo
+echo <span class="str">"NINEROUTER_API_KEY=sk-your-key-here"</span> &gt; /etc/trazezzo/.env
+chmod 600 /etc/trazezzo/.env  <span class="com"># restrict access</span></pre></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h4>Configure Trazezzo</h4>
+      <p>Edit <span class="inline-code">trazezzo/config.py</span>:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="lang">config.py</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <div class="code-body"><pre><span class="com"># LLM Configuration — 9Router</span>
+LLM_BASE_URL     = <span class="str">"https://9router.com/v1"</span>
+LLM_MODEL        = <span class="str">"coding"</span>
+LLM_ENV_KEY_NAME = <span class="str">"NINEROUTER_API_KEY"</span>
+LLM_ENV_PATH     = <span class="str">"/etc/trazezzo/.env"</span></pre></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h4>Restart &amp; verify</h4>
+      <div class="code-block">
+        <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+        <div class="code-body"><pre>systemctl restart trazezzo
+<span class="com"># Test AI chatbot dari dashboard</span></pre></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Option B: Bring Your Own Model</h3>
+  <p>Trazezzo kompatibel dengan provider apapun yang mendukung OpenAI chat completions API. Termasuk OpenAI, Anthropic (via compatibility layer), Ollama, vLLM, LM Studio, dan lainnya.</p>
+
+  <div class="info-card">
+    <h4>Provider Configuration Examples</h4>
+    <p class="card-desc">Edit <span class="inline-code">trazezzo/config.py</span> sesuai provider Anda.</p>
+
+    <h4 style="margin-top:16px">OpenAI</h4>
+    <div class="code-block">
+      <div class="code-header"><span class="lang">config.py</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      <div class="code-body"><pre>LLM_BASE_URL     = <span class="str">"https://api.openai.com/v1"</span>
+LLM_MODEL        = <span class="str">"gpt-4o"</span>
+LLM_ENV_KEY_NAME = <span class="str">"OPENAI_API_KEY"</span>
+LLM_ENV_PATH     = <span class="str">"/etc/trazezzo/.env"</span></pre></div>
+    </div>
+
+    <h4 style="margin-top:16px">Ollama (self-hosted, local)</h4>
+    <div class="code-block">
+      <div class="code-header"><span class="lang">config.py</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      <div class="code-body"><pre>LLM_BASE_URL     = <span class="str">"http://localhost:11434/v1"</span>
+LLM_MODEL        = <span class="str">"llama3.2"</span>
+LLM_ENV_KEY_NAME = <span class="str">"OLLAMA_API_KEY"</span>  <span class="com"># atau dummy value</span>
+LLM_ENV_PATH     = <span class="str">"/etc/trazezzo/.env"</span></pre></div>
+    </div>
+
+    <h4 style="margin-top:16px">vLLM / LM Studio</h4>
+    <div class="code-block">
+      <div class="code-header"><span class="lang">config.py</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+      <div class="code-body"><pre>LLM_BASE_URL     = <span class="str">"http://localhost:8000/v1"</span>  <span class="com"># vLLM default port</span>
+LLM_MODEL        = <span class="str">"your-model-name"</span>
+LLM_ENV_KEY_NAME = <span class="str">"VLLM_API_KEY"</span>
+LLM_ENV_PATH     = <span class="str">"/etc/trazezzo/.env"</span></pre></div>
+    </div>
+  </div>
+
+  <div class="callout info">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <div class="body">
+      <strong>Security</strong>
+      API key disimpan di <span class="inline-code">/etc/trazezzo/.env</span> dengan permission 600. LLM client (<span class="inline-code">llm.py</span>) membaca key saat runtime dan menyimpannya in-memory. Key tidak pernah di-expose di UI atau di-log.
+    </div>
+  </div>
+
+  <h3>Chat Modes</h3>
+  <p>AI Chatbot memiliki dua mode operasi yang bisa di-toggle dari UI:</p>
+  <table class="spec-table">
+    <thead><tr><th>Mode</th><th>Behavior</th><th>Use Case</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Q&amp;A (Reasoning)</strong></td>
+        <td>Streaming text response. Read-only. LLM menerima konteks server dan menjawab pertanyaan.</td>
+        <td>"Server lemot, kenapa?"</td>
+      </tr>
+      <tr>
+        <td><strong>Agent</strong></td>
+        <td>Full operation mode. LLM dapat propose commands (exec, read_file, write_file, git_push, service_action) yang dieksekusi di server.</td>
+        <td>"Restart nginx dan cek config"</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>Agent mode menggunakan structured JSON action blocks yang diparse dari LLM output:</p>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">Action format</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># LLM outputs inline JSON action blocks:</span>
+<span class="kw">{</span>
+  <span class="str">"tool"</span>: <span class="str">"exec"</span>,
+  <span class="str">"command"</span>: <span class="str">"systemctl status nginx"</span>
+<span class="kw">}</span>
+
+<span class="com"># Available tools:</span>
+<span class="com"># exec           — run shell command (with safety checks)</span>
+<span class="com"># read_file      — read file contents</span>
+<span class="com"># write_file     — write content to file</span>
+<span class="com"># list_dir       — list directory contents</span>
+<span class="com"># git_push       — git add + commit + push</span>
+<span class="com"># service_action — start/stop/restart a service</span></pre></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- PROACTIVE MODES -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="proactive-modes">
+  <h2>Proactive Modes</h2>
+  <p>Proactive agent berjalan di background dengan interval 30 detik. Mendeteksi anomali dan merespon berdasarkan mode yang dipilih.</p>
+
+  <div class="mode-compare">
+    <div class="mode-col">
+      <span class="mode-tag calm">Default</span>
+      <h4>Calm Mode</h4>
+      <p style="font-size:.84rem;color:var(--muted);margin-bottom:14px">Advisory only. AI mengawasi dan menyarankan.</p>
+      <ul>
+        <li>Monitoring 24/7 semua metrik</li>
+        <li>Deteksi: CPU spike, disk full, OOM, failed services</li>
+        <li>Rekomendasi muncul di dashboard &amp; chat</li>
+        <li>Timeline event dengan atribusi aktor</li>
+        <li>Tidak ada eksekusi tanpa approval manual</li>
+      </ul>
+    </div>
+    <div class="mode-col">
+      <span class="mode-tag aggr">Pro</span>
+      <h4>Aggressive Mode</h4>
+      <p style="font-size:.84rem;color:var(--muted);margin-bottom:14px">Auto-remediation dengan allowlist keamanan.</p>
+      <ul>
+        <li>Semua fitur Calm Mode</li>
+        <li>Auto-restart failed services</li>
+        <li>Auto-kill OOM processes</li>
+        <li>Auto-cleanup journal &amp; apt cache</li>
+        <li>Renice CPU hog processes</li>
+        <li>Approval queue untuk action di luar allowlist</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Switching Modes</h3>
+  <p>Mode bisa di-toggle dari dashboard (chat panel → Calm/Aggressive toggle) atau via API:</p>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Check current mode</span>
+curl http://localhost:9122/api/proactive/status
+
+<span class="com"># Switch to aggressive</span>
+curl -X POST http://localhost:9122/api/proactive/mode \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"mode":"aggressive"}'</span>
+
+<span class="com"># Switch back to calm</span>
+curl -X POST http://localhost:9122/api/proactive/mode \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"mode":"calm"}'</span></pre></div>
+  </div>
+
+  <div class="callout danger">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="body">
+      <strong>Aggressive Mode Safety</strong>
+      Saat mengaktifkan aggressive mode, confirmation dialog muncul di UI. Semua auto-executed actions harus ada di <a href="#allowlist">allowlist</a>. Action di luar allowlist masuk ke approval queue — user harus approve sebelum eksekusi.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- ALLOWLIST -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="allowlist">
+  <h2>Allowlist &amp; Safety</h2>
+  <p>Allowlist mendefinisikan action apa saja yang boleh di-auto-execute di aggressive mode. Didefinisikan di <span class="inline-code">scheduler.py</span>:</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="lang">scheduler.py</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre>AGGRESSIVE_ALLOWLIST = {
+    <span class="str">"service.restart"</span>:     <span class="str">"systemctl restart {unit}"</span>,
+    <span class="str">"service.start"</span>:       <span class="str">"systemctl start {unit}"</span>,
+    <span class="str">"process.kill_oom"</span>:    <span class="str">"kill -9 {pid}"</span>,
+    <span class="str">"disk.cleanup_journal"</span>: <span class="str">"journalctl --vacuum-time=2d"</span>,
+    <span class="str">"disk.cleanup_apt"</span>:     <span class="str">"apt-get clean"</span>,
+    <span class="str">"process.nice"</span>:        <span class="str">"renice +10 {pid}"</span>,
+}</pre></div>
+  </div>
+
+  <h3>Approval Flow</h3>
+  <p>Untuk action yang <strong>tidak</strong> ada di allowlist, proactive agent menyimpannya sebagai pending approval:</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="lang">Approval flow</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com">1. Agent detects anomaly (e.g., disk 98% full)</span>
+<span class="com">2. Agent proposes action not in allowlist</span>
+<span class="com">3. store_pending_approval() saves to /var/lib/trazezzo/pending_approvals.json</span>
+<span class="com">4. Approval appears in chat panel with command + reason</span>
+<span class="com">5. User clicks "Approve &amp; Execute" or "Reject"</span>
+<span class="com">6. If approved: command executed, result shown in chat</span>
+<span class="com">7. If rejected: approval removed</span></pre></div>
+  </div>
+
+  <h3>Pending Approvals API</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># List pending approvals</span>
+curl http://localhost:9122/api/approvals
+
+<span class="com"># Approve</span>
+curl -X POST http://localhost:9122/api/approvals/{id}/approve
+
+<span class="com"># Reject</span>
+curl -X POST http://localhost:9122/api/approvals/{id}/reject</pre></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- CONFIGURATION -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="config">
+  <h2>Configuration</h2>
+  <p>Semua konfigurasi di <span class="inline-code">trazezzo/config.py</span>. Environment variables override defaults.</p>
+
+  <table class="spec-table">
+    <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>DASHBOARD_HOST</code></td><td>127.0.0.1</td><td>Dashboard bind address. Use 0.0.0.0 for external access (not recommended — use nginx).</td></tr>
+      <tr><td><code>DASHBOARD_PORT</code></td><td>9122</td><td>Dashboard port.</td></tr>
+      <tr><td><code>DATA_DIR</code></td><td>/var/lib/trazezzo</td><td>SQLite database + config storage. Override via <code>TRAZEZZO_DATA_DIR</code> env.</td></tr>
+      <tr><td><code>WARM_RETENTION_DAYS</code></td><td>7</td><td>Event retention di SQLite warm store. Events older than this auto-archived.</td></tr>
+      <tr><td><code>RING_BUFFER_HOT_SECONDS</code></td><td>300</td><td>In-memory ring buffer window (5 min). Hot events for instant timeline.</td></tr>
+      <tr><td><code>BATCH_INSERT_INTERVAL</code></td><td>1.0</td><td>Batch insert interval (seconds). Balances DB write throughput vs latency.</td></tr>
+      <tr><td><code>PROACTIVE_INTERVAL</code></td><td>30</td><td>Proactive agent check interval (seconds).</td></tr>
+      <tr><td><code>PROACTIVE_MODE</code></td><td>calm</td><td>Default proactive mode. <code>calm</code> or <code>aggressive</code>.</td></tr>
+      <tr><td><code>CAPTURE_JOURNALD</code></td><td>True</td><td>Enable journald event capture.</td></tr>
+      <tr><td><code>CAPTURE_AUDITD</code></td><td>True</td><td>Enable auditd kernel event capture.</td></tr>
+      <tr><td><code>CAPTURE_PSUTIL</code></td><td>True</td><td>Enable psutil metrics capture (CPU, RAM, disk, net).</td></tr>
+      <tr><td><code>CAPTURE_METRICS_INTERVAL</code></td><td>5</td><td>psutil polling interval (seconds).</td></tr>
+      <tr><td><code>LLM_BASE_URL</code></td><td><code>https://9router.com/v1</code></td><td>OpenAI-compatible API base URL. 9Router by default, ganti dengan provider Anda sendiri.</td></tr>
+      <tr><td><code>LLM_MODEL</code></td><td>coding</td><td>LLM model name. Sesuaikan dengan provider (e.g. <code>gpt-4o</code>, <code>llama3.2</code>).</td></tr>
+      <tr><td><code>LLM_ENV_KEY_NAME</code></td><td>NINEROUTER_API_KEY</td><td>Env key name untuk API key. Bisa <code>OPENAI_API_KEY</code>, <code>OLLAMA_API_KEY</code>, dll.</td></tr>
+      <tr><td><code>LLM_ENV_PATH</code></td><td>/etc/trazezzo/.env</td><td>Path ke file env yang berisi API key.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- API ENDPOINTS -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="api">
+  <h2>API Endpoints</h2>
+  <p>All endpoints prefixed with <span class="inline-code">/trazezzo</span> when behind nginx, or <span class="inline-code">http://localhost:9122</span> direct.</p>
+
+  <table class="spec-table">
+    <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>GET</code></td><td>/api/overview</td><td>System overview (CPU, RAM, load, uptime, disks, OS info)</td></tr>
+      <tr><td><code>GET</code></td><td>/api/services</td><td>List systemd services with status</td></tr>
+      <tr><td><code>POST</code></td><td>/api/services/{unit}/{action}</td><td>Start/stop/restart a service</td></tr>
+      <tr><td><code>GET</code></td><td>/api/activity</td><td>Activity feed (filtered by actor: user/agent/system)</td></tr>
+      <tr><td><code>GET</code></td><td>/api/timeline</td><td>Timeline events (last 30 min default)</td></tr>
+      <tr><td><code>GET</code></td><td>/api/diagram</td><td>Service dependency graph data</td></tr>
+      <tr><td><code>GET</code></td><td>/api/logs</td><td>Journald logs (filter by unit, line count)</td></tr>
+      <tr><td><code>GET</code></td><td>/api/storage</td><td>Disk usage, filesystems, mounts, LVM</td></tr>
+      <tr><td><code>GET</code></td><td>/api/containers</td><td>Podman/Docker container list</td></tr>
+      <tr><td><code>GET</code></td><td>/api/networking</td><td>Interfaces, routes, firewall, bonds</td></tr>
+      <tr><td><code>GET</code></td><td>/api/accounts</td><td>User accounts list</td></tr>
+      <tr><td><code>POST</code></td><td>/api/chat</td><td>AI chatbot (SSE streaming, mode: reasoning/agent)</td></tr>
+      <tr><td><code>GET</code></td><td>/api/proactive/status</td><td>Current proactive mode</td></tr>
+      <tr><td><code>POST</code></td><td>/api/proactive/mode</td><td>Switch proactive mode (calm/aggressive)</td></tr>
+      <tr><td><code>GET</code></td><td>/api/recommendations</td><td>Auto-generated recommendations</td></tr>
+      <tr><td><code>POST</code></td><td>/api/recommendations/execute</td><td>Execute a recommendation action</td></tr>
+      <tr><td><code>GET</code></td><td>/api/approvals</td><td>List pending approvals</td></tr>
+      <tr><td><code>POST</code></td><td>/api/approvals/{id}/approve</td><td>Approve &amp; execute a pending action</td></tr>
+      <tr><td><code>POST</code></td><td>/api/approvals/{id}/reject</td><td>Reject a pending action</td></tr>
+      <tr><td><code>WS</code></td><td>/ws/exec</td><td>WebSocket: real-time agent execution stream</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- CLI -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="cli">
+  <h2>CLI Commands</h2>
+  <p>Trazezzo dilengkapi CLI untuk init, start, stop, status, log, dan update.</p>
+
+  <table class="spec-table">
+    <thead><tr><th>Command</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>trazezzo init</code></td><td>Initialize: create venv, install deps, install auditd, write systemd service + nginx config, reload nginx.</td></tr>
+      <tr><td><code>trazezzo up</code></td><td>Start trazezzo systemd service. Verify running + show dashboard URL.</td></tr>
+      <tr><td><code>trazezzo down</code></td><td>Stop trazezzo service.</td></tr>
+      <tr><td><code>trazezzo status</code></td><td>Show service status, hostname, uptime, CPU/RAM usage, DB size.</td></tr>
+      <tr><td><code>trazezzo log</code></td><td>Follow trazezzo logs (journalctl -u trazezzo -f).</td></tr>
+      <tr><td><code>trazezzo update</code></td><td>Update Trazezzo: stop service → git pull → reinstall deps → restart service. Shows version before/after.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Example session</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># First time setup</span>
+<span class="builtin">cd</span> /opt/trazezzo
+trazezzo init
+<span class="com"># ✓ Venv created</span>
+<span class="com"># ✓ Dependencies installed</span>
+<span class="com"># ✓ auditd installed &amp; enabled</span>
+<span class="com"># ✓ systemd service written</span>
+<span class="com"># ✓ nginx config installed</span>
+
+<span class="com"># Start</span>
+trazezzo up
+<span class="com"># ✓ Trazezzo is running</span>
+<span class="com">#   Dashboard: http://localhost:9122</span>
+<span class="com">#   URL:       https://your-domain/trazezzo/</span>
+
+<span class="com"># Check status</span>
+trazezzo status
+<span class="com"># Service:  active</span>
+<span class="com"># Hostname: srv-01</span>
+<span class="com"># Uptime:   3 days, 4:22:01</span>
+<span class="com"># CPU:      12%</span>
+<span class="com"># RAM:      34%</span>
+<span class="com"># Database: /var/lib/trazezzo/events.db (8432 KB)</span>
+
+<span class="com"># View logs</span>
+trazezzo log
+
+<span class="com"># Stop</span>
+trazezzo down
+
+<span class="com"># ── Update to latest version ──</span>
+<span class="com"># When developer pushes new version to git:</span>
+trazezzo update
+<span class="com"># ▶ Current version: 0.1.0</span>
+<span class="com"># ▶ Stopping Trazezzo...</span>
+<span class="com"># ▶ Pulling latest code...</span>
+<span class="com"># ▶ Reinstalling dependencies...</span>
+<span class="com"># ▶ Restarting Trazezzo...</span>
+<span class="com"># ✅ Trazezzo updated successfully!</span>
+<span class="com">#    Version: 0.1.0 → 0.2.0</span>
+<span class="com">#    Service: active</span></pre></div>
+  </div>
+
+  <div class="callout tip">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 L3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    <div class="body">
+      <strong>That's it!</strong>
+      Trazezzo siap digunakan. Buka dashboard di browser, mulai chat dengan AI assistant, atau biarkan proactive agent menjaga server Anda 24/7. Untuk bantuan lebih lanjut, lihat <a href="#intro"> dokumentasi</a> atau hubungi support.
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+// ── Copy code button ──────────────────
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('pre').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'copied!';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
+}
+
+// ── TOC active tracking ──────────────
+const tocItems = document.querySelectorAll('.toc-item');
+const sections = document.querySelectorAll('.section');
+
+function updateActiveToc() {
+  let current = '';
+  sections.forEach(s => {
+    const rect = s.getBoundingClientRect();
+    if (rect.top <= 100) current = s.id;
+  });
+  tocItems.forEach(item => {
+    item.classList.toggle('active', item.getAttribute('href') === '#' + current);
+  });
+}
+window.addEventListener('scroll', updateActiveToc);
+updateActiveToc();
+
+// ── TOC search filter ────────────────
+function filterToc() {
+  const q = document.getElementById('tocSearch').value.toLowerCase();
+  let lastSection = null;
+  document.querySelectorAll('.toc-nav > *').forEach(el => {
+    if (el.classList.contains('toc-section')) {
+      lastSection = el;
+      el.style.display = '';
+    }
+    if (el.classList.contains('toc-item')) {
+      const match = el.textContent.toLowerCase().includes(q);
+      el.style.display = match ? '' : 'none';
+    }
+  });
+}
+
+// ── Smooth scroll with offset ────────
+tocItems.forEach(item => {
+  item.addEventListener('click', (e) => {
+    e.preventDefault();
+    const target = document.querySelector(item.getAttribute('href'));
+    if (target) {
+      const offset = 20;
+      const top = target.getBoundingClientRect().top + window.pageYOffset - offset;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+  });
+});
+</script>
+</body>
+</html>

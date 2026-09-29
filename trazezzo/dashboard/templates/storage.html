@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo — Storage{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>Storage</h2>
+ <div class="desc">{{ storage.partitions | length }} partitions · LVM: {% if storage.lvm.vgs %}yes{% else %}no{% endif %}</div>
+</div>
+
+<div class="card">
+ <div class="card-title">Partitions</div>
+ {% for part in storage.partitions %}
+ <div style="margin-bottom: 12px;">
+ <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+ <span><strong>{{ part.mountpoint }}</strong> ({{ part.fstype }}) — {{ part.device }}</span>
+ {% if part.used_gb is defined %}
+ <span>{{ part.used_gb }}/{{ part.total_gb }} GB ({{ part.percent }}%)</span>
+ {% else %}
+ <span style="color: var(--error);">inaccessible</span>
+ {% endif %}
+ </div>
+ {% if part.percent is defined %}
+ <div class="progress-bar">
+ <div class="progress-fill {% if part.percent > 80 %}bad{% elif part.percent > 50 %}warn{% else %}good{% endif %}" style="width: {{ part.percent }}%"></div>
+ </div>
+ {% endif %}
+ </div>
+ {% endfor %}
+</div>
+
+{% if storage.lvm.vgs or storage.lvm.pvs or storage.lvm.lvs %}
+<div class="grid grid-3">
+ <div class="card">
+ <div class="card-title">Physical Volumes</div>
+ <pre style="font-size: 0.8rem;">{% for pv in storage.lvm.pvs %}{{ pv }}
+{% endfor %}</pre>
+ </div>
+ <div class="card">
+ <div class="card-title">Volume Groups</div>
+ <pre style="font-size: 0.8rem;">{% for vg in storage.lvm.vgs %}{{ vg }}
+{% endfor %}</pre>
+ </div>
+ <div class="card">
+ <div class="card-title">Logical Volumes</div>
+ <pre style="font-size: 0.8rem;">{% for lv in storage.lvm.lvs %}{{ lv }}
+{% endfor %}</pre>
+ </div>
+</div>
+{% endif %}
+
+<div class="card">
+ <div class="card-title">Block Devices</div>
+ <pre style="font-size: 0.8rem;">{{ storage.block_devices | tojson(indent=2) }}</pre>
+</div>
+{% endblock %}
