@@ -206,7 +206,7 @@ Keluarkan action dalam format ```action ... ``` block (JSON). Server akan ekseku
 
 5. **git_push** — git add + commit + push
 ```action
-{"tool": "git_push", "repo_path": "/opt/trazezzo", "message": "fix: update config", "branch": "main"}
+{"tool": "git_push", "repo_path": "/root/hermes-fullset", "message": "fix: update config", "branch": "main"}
 ```
 
 6. **service_action** — manage systemd service

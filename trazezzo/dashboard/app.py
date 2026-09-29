@@ -503,6 +503,15 @@ async def ws_exec(ws: WebSocket):
     await exec_ws_endpoint(ws)
 
 
+# ── SSH Terminal WebSocket ───────────────────────────────────────────
+
+@app.websocket("/ws/ssh/{conn_id}")
+async def ws_ssh_terminal(ws: WebSocket, conn_id: str):
+    """SSH terminal WebSocket — bridge to remote SSH session."""
+    from trazezzo.modules.ssh_terminal import ssh_terminal_ws
+    await ssh_terminal_ws(ws, conn_id)
+
+
 # ── File Editor ────────────────────────────────────────────────────────
 
 @app.get("/editor", response_class=HTMLResponse)
@@ -599,11 +608,24 @@ async def api_editor_upload(request: Request):
     else:
         form = await request.form()
         upload_file_obj = form.get("file")
-        dest_dir = form.get("dir", "/root")
+        dest_dir = str(form.get("dir", "/root") or "/root")
+        rel_path = str(form.get("rel_path", "") or "")
         if not upload_file_obj or not hasattr(upload_file_obj, "read"):
             return {"error": "No file provided"}
         content = await upload_file_obj.read()
-        result = upload_file(dest_dir, upload_file_obj.filename or "unnamed", content)
+        upload_filename = getattr(upload_file_obj, "filename", None) or "unnamed"
+
+        # Handle folder upload: rel_path may contain subdirectories
+        if rel_path and "/" in rel_path:
+            subdir = os.path.dirname(rel_path)
+            if subdir:
+                dest_dir = os.path.join(dest_dir, subdir)
+                os.makedirs(dest_dir, exist_ok=True)
+            filename = os.path.basename(rel_path) or upload_filename
+        else:
+            filename = upload_filename
+
+        result = upload_file(dest_dir, filename, content)
 
     store = get_store()
     store.add(ServerEvent(
@@ -1179,6 +1201,88 @@ async def api_compose_action(action: str, request: Request):
     from trazezzo.modules.compose import compose_action
     body = await request.json()
     return compose_action(body.get("project_dir", ""), action)
+
+
+# ── SSH Connection Manager ────────────────────────────────────────────
+
+@app.get("/ssh", response_class=HTMLResponse)
+async def ssh_terminal_page(request: Request):
+    """SSH terminal page — multi-tab remote terminal."""
+    from trazezzo.modules.ssh_connections import list_connections, list_groups, list_ssh_keys
+    return templates.TemplateResponse(request, "ssh_terminal.html", {
+        "request": request,
+        "active": "ssh",
+        "connections": list_connections(),
+        "groups": list_groups(),
+        "ssh_keys": list_ssh_keys(),
+    })
+
+
+@app.get("/api/ssh/connections")
+async def api_ssh_connections():
+    from trazezzo.modules.ssh_connections import list_connections, list_groups
+    return {"connections": list_connections(), "groups": list_groups()}
+
+
+@app.post("/api/ssh/connections")
+async def api_ssh_add_connection(request: Request):
+    from trazezzo.modules.ssh_connections import add_connection
+    body = await request.json()
+    return add_connection(
+        label=body.get("label", ""),
+        host=body.get("host", ""),
+        port=body.get("port", 22),
+        user=body.get("user", "root"),
+        auth_method=body.get("auth_method", "key"),
+        key_path=body.get("key_path"),
+        password=body.get("password"),
+        group=body.get("group", "default"),
+        proxy_jump=body.get("proxy_jump"),
+    )
+
+
+@app.put("/api/ssh/connections/{conn_id}")
+async def api_ssh_update_connection(conn_id: str, request: Request):
+    from trazezzo.modules.ssh_connections import update_connection
+    body = await request.json()
+    return update_connection(conn_id, **body)
+
+
+@app.delete("/api/ssh/connections/{conn_id}")
+async def api_ssh_delete_connection(conn_id: str):
+    from trazezzo.modules.ssh_connections import delete_connection
+    return {"success": delete_connection(conn_id)}
+
+
+@app.post("/api/ssh/connections/{conn_id}/test")
+async def api_ssh_test_connection(conn_id: str):
+    from trazezzo.modules.ssh_connections import test_connection
+    return test_connection(conn_id)
+
+
+@app.get("/api/ssh/keys")
+async def api_ssh_keys():
+    from trazezzo.modules.ssh_connections import list_ssh_keys
+    return {"keys": list_ssh_keys()}
+
+
+@app.post("/api/ssh/keys/upload")
+async def api_ssh_upload_key(request: Request):
+    from trazezzo.modules.ssh_connections import upload_ssh_key
+    body = await request.json()
+    return upload_ssh_key(body.get("name", ""), body.get("content", ""))
+
+
+@app.delete("/api/ssh/keys/{key_id}")
+async def api_ssh_delete_key(key_id: str):
+    from trazezzo.modules.ssh_connections import delete_ssh_key
+    return {"success": delete_ssh_key(key_id)}
+
+
+@app.get("/api/ssh/sessions")
+async def api_ssh_sessions():
+    from trazezzo.modules.ssh_terminal import list_active_sessions
+    return {"sessions": list_active_sessions()}
 
 
 # ── Run ───────────────────────────────────────────────────────────────

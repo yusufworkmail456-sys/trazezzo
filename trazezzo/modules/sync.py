@@ -126,7 +126,7 @@ def setup_cron(schedule: str = "0 3 * * 0") -> dict:
     Args:
         schedule: cron schedule expression (5 fields: min hour day month dow)
     """
-    venv_python = "/opt/trazezzo/.venv/bin/python"
+    venv_python = "/root/hermes-fullset/trazezzo/.venv/bin/python"
     cmd = f"{venv_python} -c \"from trazezzo.modules.sync import trigger_sync; trigger_sync()\""
 
     try:

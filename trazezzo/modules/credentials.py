@@ -32,7 +32,7 @@ SCAN_PATHS = [
     "/etc/systemd/system",
     "/etc/cron.d",
     "/root/.hermes",
-    "/opt/trazezzo",
+    "/root/hermes-fullset",
     "/opt",
     "/var/www",
 ]

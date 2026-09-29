@@ -1,4 +1,4 @@
-"""Terminal module — web shell via WebSocket."""
+"""Terminal module — web shell via WebSocket (FastAPI/Starlette)."""
 
 from __future__ import annotations
 
@@ -7,12 +7,17 @@ import os
 import pty
 import signal
 import struct
+import logging
 
-import websockets
+from fastapi import WebSocket, WebSocketDisconnect
+
+log = logging.getLogger("trazezzo.terminal")
 
 
-async def terminal_websocket(websocket):
-    """Spawn a PTY shell and bridge to WebSocket."""
+async def terminal_websocket(websocket: WebSocket):
+    """Spawn a PTY shell and bridge to FastAPI WebSocket."""
+    await websocket.accept()
+
     # Create pseudo-terminal
     master_fd, slave_fd = pty.openpty()
 
@@ -26,6 +31,7 @@ async def terminal_websocket(websocket):
     set_size()
 
     # Spawn shell
+    os.chdir("/root")
     shell = os.environ.get("SHELL", "/bin/bash")
     pid = os.fork()
     if pid == 0:
@@ -39,30 +45,52 @@ async def terminal_websocket(websocket):
         os.execvp(shell, [shell, "-i"])
 
     os.close(slave_fd)
+    log.info("Local terminal started: pid=%d", pid)
 
     async def read_pty():
         """Read from PTY and send to WebSocket."""
         loop = asyncio.get_event_loop()
         while True:
             try:
-                data = await loop.run_in_executor(None, os.read, master_fd, 1024)
+                data = await loop.run_in_executor(None, os.read, master_fd, 4096)
                 if data:
-                    await websocket.send(data.decode("utf-8", errors="replace"))
+                    await websocket.send_text(data.decode("utf-8", errors="replace"))
                 else:
                     break
             except Exception:
                 break
 
+        try:
+            await websocket.send_text("\r\n\x1b[33m● Terminal closed.\x1b[0m\r\n")
+        except Exception:
+            pass
+        try:
+            await websocket.close()
+        except Exception:
+            pass
+
     async def write_pty():
         """Read from WebSocket and write to PTY."""
         try:
-            async for message in websocket:
-                if isinstance(message, bytes):
-                    os.write(master_fd, message)
-                else:
-                    os.write(master_fd, message.encode())
-        except Exception:
+            while True:
+                message = await websocket.receive_text()
+
+                # Handle resize command
+                if message.startswith("\x1b]resize;"):
+                    try:
+                        parts = message.split(";")
+                        rows = int(parts[1])
+                        cols = int(parts[2].rstrip("\x07"))
+                        set_size(rows, cols)
+                    except Exception:
+                        pass
+                    continue
+
+                os.write(master_fd, message.encode())
+        except WebSocketDisconnect:
             pass
+        except Exception as exc:
+            log.debug("Write PTY error: %s", exc)
 
     try:
         await asyncio.gather(read_pty(), write_pty())
@@ -71,4 +99,8 @@ async def terminal_websocket(websocket):
             os.kill(pid, signal.SIGTERM)
         except Exception:
             pass
-        os.close(master_fd)
+        try:
+            os.close(master_fd)
+        except Exception:
+            pass
+        log.info("Local terminal ended: pid=%d", pid)

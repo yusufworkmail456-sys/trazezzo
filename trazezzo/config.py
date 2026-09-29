@@ -28,10 +28,10 @@ PROACTIVE_INTERVAL = 30  # seconds between checks
 PROACTIVE_MODE = "calm"  # calm | aggressive
 
 # ── LLM (reuse 9router from KC) ───────────────────────────────────────
-LLM_BASE_URL = "https://9router.com/v1"
+LLM_BASE_URL = "https://9router.amital.co.id/v1"
 LLM_MODEL = "coding"
-LLM_ENV_KEY_NAME = "LLM_API_KEY"
-LLM_ENV_PATH = "/etc/trazezzo/.env"
+LLM_ENV_KEY_NAME = "HERMES_CUSTOM_9ROUTER_AMITAL_CO_ID_API_KEY"
+LLM_ENV_PATH = "/root/.hermes/.env"
 
 # ── Capture sources ───────────────────────────────────────────────────
 CAPTURE_JOURNALD = True

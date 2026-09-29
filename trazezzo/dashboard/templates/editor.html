@@ -1,58 +1,135 @@
 {% extends "base.html" %}
-{% block title %}Trazezzo — File Editor{% endblock %}
+{% block title %}Trazezzo — File Explorer{% endblock %}
+{% block topbar_title %}File Explorer{% endblock %}
 {% block head %}
 <style>
- .editor-layout { display: grid; grid-template-columns: 280px 1fr; gap: 12px; height: calc(100vh - 180px); }
- .file-tree { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow-y: auto; padding: 10px; }
- .file-tree-item { padding: 3px 6px; cursor: pointer; border-radius: 4px; font-size: 0.82rem; display: flex; align-items: center; gap: 5px; }
+ .editor-layout { display: grid; grid-template-columns: 300px 1fr; gap: 12px; height: calc(100vh - 180px); }
+ .file-tree { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow-y: auto; padding: 0; display: flex; flex-direction: column; }
+ .tree-search-wrap { padding: 8px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 10; }
+ .tree-search { width: 100%; padding: 5px 10px 5px 28px; border: 1px solid var(--border); border-radius: 5px; font-size: 0.8rem; background: var(--bg); }
+ .tree-search:focus { outline: none; border-color: var(--primary); }
+ .tree-search-wrap { position: relative; }
+ .tree-search-wrap svg { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
+ .tree-content { padding: 6px; flex: 1; overflow-y: auto; }
+ .breadcrumb { font-size: 0.72rem; color: var(--text-muted); padding: 4px 8px; border-bottom: 1px solid var(--border); font-family: var(--font-mono); }
+ .file-tree-item { padding: 4px 8px; cursor: pointer; border-radius: 4px; font-size: 0.82rem; display: flex; align-items: center; gap: 6px; }
  .file-tree-item:hover { background: var(--bg); }
- .file-tree-item.dir { font-weight: 600; }
- .file-tree-item .icon { width: 16px; font-size: 0.9rem; }
+ .file-tree-item.dir { font-weight: 500; }
+ .file-tree-item .ft-icon { width: 16px; height: 16px; flex-shrink: 0; color: var(--text-muted); }
+ .file-tree-item.dir .ft-icon { color: var(--primary); }
+ .file-tree-item .ft-size { color: var(--text-muted); font-size: 0.68rem; margin-left: auto; }
+
  .editor-pane { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
- .editor-toolbar { display: flex; gap: 6px; align-items: center; }
- .editor-toolbar .path { flex: 1; padding: 5px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; font-family: monospace; font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ .editor-toolbar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+ .editor-toolbar .path { flex: 1; min-width: 100px; padding: 5px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; font-family: var(--font-mono); font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
  .editor-content { flex: 1; width: 100%; background: #1e1e1e; color: #e2e8f0; border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-family: 'Monaco', 'Menlo', 'Consolas', monospace; font-size: 0.82rem; resize: none; line-height: 1.6; tab-size: 4; }
  .editor-content:focus { outline: none; border-color: var(--primary); }
- .breadcrumb { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 4px; }
  .file-info { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between; }
  .quick-paths { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
  .quick-path { padding: 3px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; font-size: 0.75rem; cursor: pointer; transition: all 0.15s; }
  .quick-path:hover { border-color: var(--primary); color: var(--primary); }
+ .quick-path.active { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+
+ /* Toolbar buttons */
+ .tb-btn { display: flex; align-items: center; gap: 5px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); cursor: pointer; font-size: 0.78rem; font-weight: 500; color: var(--text); transition: all 0.15s; }
+ .tb-btn:hover { border-color: var(--primary); color: var(--primary); }
+ .tb-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+ .tb-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+ .tb-btn.btn-primary { background: var(--primary); color: white; border-color: var(--primary); }
+ .tb-btn.btn-primary:hover { background: var(--primary-hover); }
+ .tb-btn.btn-primary:disabled { background: var(--border); border-color: var(--border); color: var(--text-muted); }
+ .tb-btn.btn-danger { color: var(--error); border-color: var(--border); }
+ .tb-btn.btn-danger:hover { border-color: var(--error); background: #fef2f2; }
+ .tb-btn.btn-danger:disabled { color: var(--text-muted); }
+
+ /* Dropdown menu */
+ .tb-dropdown { position: relative; }
+ .tb-dropdown-menu { display: none; position: absolute; top: 100%; left: 0; margin-top: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); z-index: 100; min-width: 160px; overflow: hidden; }
+ .tb-dropdown.open .tb-dropdown-menu { display: block; }
+ .tb-dropdown-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; font-size: 0.78rem; color: var(--text); transition: background 0.1s; }
+ .tb-dropdown-item:hover { background: var(--bg); }
+ .tb-dropdown-item svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--text-muted); }
 </style>
 {% endblock %}
 {% block content %}
 <div class="page-header">
- <h2>File Editor</h2>
- <div class="desc">Browse, read, edit config files. Auto-backup before write. Blocked: shadow, .env, SSH keys.</div>
+ <h2>File Explorer</h2>
+ <div class="desc">Browse, read, edit, upload files. Auto-backup before write/delete. Blocked: shadow, .env, SSH keys.</div>
 </div>
 
 <div class="quick-paths">
+ <span class="quick-path" onclick="loadTree('/')">/</span>
  <span class="quick-path" onclick="loadTree('/etc')">/etc</span>
  <span class="quick-path" onclick="loadTree('/etc/nginx')">/etc/nginx</span>
  <span class="quick-path" onclick="loadTree('/etc/systemd')">/etc/systemd</span>
- <span class="quick-path" onclick="loadTree('/opt/trazezzo')">trazezzo</span>
+ <span class="quick-path" onclick="loadTree('/root')">/root</span>
+ <span class="quick-path" onclick="loadTree('/root/hermes-fullset')">hermes-fullset</span>
  <span class="quick-path" onclick="loadTree('/var/lib/trazezzo')">trazezzo data</span>
+ <span class="quick-path" onclick="loadTree('/var/log')">/var/log</span>
 </div>
 
 <div class="editor-layout">
  <div class="file-tree" id="fileTree">
- <div class="breadcrumb" id="breadcrumb">/</div>
- <div id="treeContent">Loading...</div>
+  <div class="breadcrumb" id="breadcrumb">/</div>
+  <div class="tree-search-wrap">
+   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+   <input type="text" class="tree-search" id="treeSearch" placeholder="Search files..." oninput="filterTree()">
+  </div>
+  <div class="tree-content" id="treeContent">Loading...</div>
  </div>
  <div class="editor-pane">
- <div class="editor-toolbar">
- <span class="path" id="currentPath">Select a file to edit</span>
- <button class="btn btn-sm" onclick="loadTree(currentDir)" title="Refresh tree"></button>
- <button class="btn btn-sm" onclick="showUploadDialog()" title="Upload file from laptop">⬆️ Upload</button>
- <button class="btn btn-sm" onclick="showMkdirDialog()" title="Create new folder">+ New Folder</button>
- <button class="btn btn-sm btn-danger" id="deleteBtn" onclick="deleteFile()" disabled></button>
- <button class="btn btn-sm btn-primary" id="saveBtn" onclick="saveFile()" disabled>Save</button>
- </div>
- <textarea class="editor-content" id="editorContent" placeholder="Select a file from the tree to edit..." spellcheck="false" disabled></textarea>
- <div class="file-info" id="fileInfo">
- <span id="fileSize">No file selected</span>
- <span id="backupInfo"></span>
- </div>
+  <div class="editor-toolbar">
+   <span class="path" id="currentPath">Select a file to edit</span>
+   <button class="tb-btn" onclick="loadTree(currentDir)" title="Refresh">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    Refresh
+   </button>
+   <div class="tb-dropdown" id="newDropdown">
+    <button class="tb-btn" onclick="toggleDropdown('newDropdown')" title="New">
+     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+     New
+    </button>
+    <div class="tb-dropdown-menu">
+     <div class="tb-dropdown-item" onclick="closeDropdown('newDropdown'); showNewFileDialog()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      New File
+     </div>
+     <div class="tb-dropdown-item" onclick="closeDropdown('newDropdown'); showMkdirDialog()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      New Folder
+     </div>
+    </div>
+   </div>
+   <div class="tb-dropdown" id="uploadDropdown">
+    <button class="tb-btn" onclick="toggleDropdown('uploadDropdown')" title="Upload">
+     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+     Upload
+    </button>
+    <div class="tb-dropdown-menu">
+     <div class="tb-dropdown-item" onclick="closeDropdown('uploadDropdown'); showUploadDialog(false)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Upload File
+     </div>
+     <div class="tb-dropdown-item" onclick="closeDropdown('uploadDropdown'); showUploadDialog(true)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      Upload Folder
+     </div>
+    </div>
+   </div>
+   <button class="tb-btn btn-danger" id="deleteBtn" onclick="deleteFile()" disabled title="Delete file">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+    Delete
+   </button>
+   <button class="tb-btn btn-primary" id="saveBtn" onclick="saveFile()" disabled>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+    Save
+   </button>
+  </div>
+  <textarea class="editor-content" id="editorContent" placeholder="Select a file from the tree to edit..." spellcheck="false" disabled></textarea>
+  <div class="file-info" id="fileInfo">
+   <span id="fileSize">No file selected</span>
+   <span id="backupInfo"></span>
+  </div>
  </div>
 </div>
 {% endblock %}
@@ -62,52 +139,97 @@
 let currentDir = '/etc';
 let currentFile = null;
 let originalContent = '';
+let treeEntries = []; // cached for search
 
 function escapeJs(s) {
  return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
+// ── Dropdown toggle ──────────────────────────────
+function toggleDropdown(id) {
+ document.querySelectorAll('.tb-dropdown').forEach(d => {
+  if (d.id !== id) d.classList.remove('open');
+ });
+ document.getElementById(id).classList.toggle('open');
+}
+function closeDropdown(id) {
+ document.getElementById(id).classList.remove('open');
+}
+document.addEventListener('click', (e) => {
+ if (!e.target.closest('.tb-dropdown')) {
+  document.querySelectorAll('.tb-dropdown').forEach(d => d.classList.remove('open'));
+ }
+});
+
+// ── Icons ────────────────────────────────────────
+const ICON_DIR = `<svg class="ft-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+const ICON_FILE = `<svg class="ft-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+const ICON_UP = `<svg class="ft-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+
+// ── Load tree ────────────────────────────────────
 function loadTree(path) {
  currentDir = path;
+ document.getElementById('treeSearch').value = '';
  fetch(`/trazezzo/api/editor/ls?path=${encodeURIComponent(path)}`)
  .then(r => r.json())
  .then(data => {
- if (data.error) {
- document.getElementById('treeContent').innerHTML = `<div style="color: var(--error); font-size: 0.8rem;">${data.error}</div>`;
- return;
- }
- document.getElementById('breadcrumb').textContent = data.path;
- let html = '';
- if (data.parent) {
- html += `<div class="file-tree-item dir" onclick="loadTree('${escapeJs(data.parent)}')"><span class="icon"></span> ../</div>`;
- }
- const dirs = data.entries.filter(e => e.is_dir);
- const files = data.entries.filter(e => !e.is_dir);
- for (const entry of dirs) {
- html += `<div class="file-tree-item dir" onclick="loadTree('${escapeJs(entry.path)}')"><span class="icon"></span> ${entry.name}</div>`;
- }
- for (const entry of files) {
- const sizeStr = entry.size > 1024 ? `${(entry.size/1024).toFixed(1)}KB` : `${entry.size}B`;
- html += `<div class="file-tree-item" onclick="loadFile('${escapeJs(entry.path)}')"><span class="icon"></span> ${entry.name} <span style="color:var(--text-muted); font-size:0.7rem;">${sizeStr}</span></div>`;
- }
- document.getElementById('treeContent').innerHTML = html || '<div style="color: var(--text-muted); font-size: 0.8rem;">Empty</div>';
+  if (data.error) {
+   document.getElementById('treeContent').innerHTML = `<div style="color: var(--error); font-size: 0.8rem; padding: 8px;">${data.error}</div>`;
+   return;
+  }
+  document.getElementById('breadcrumb').textContent = data.path;
+  // Build entries list
+  treeEntries = [];
+  if (data.parent) {
+   treeEntries.push({ type: 'up', name: '../', path: data.parent, is_dir: true });
+  }
+  const dirs = data.entries.filter(e => e.is_dir);
+  const files = data.entries.filter(e => !e.is_dir);
+  dirs.forEach(e => treeEntries.push({ type: 'dir', ...e }));
+  files.forEach(e => treeEntries.push({ type: 'file', ...e }));
+  renderTree();
  });
 }
 
+function renderTree(filter) {
+ filter = (filter || '').toLowerCase();
+ let html = '';
+ for (const entry of treeEntries) {
+  if (filter && !entry.name.toLowerCase().includes(filter)) continue;
+  const icon = entry.type === 'up' ? ICON_UP : (entry.is_dir ? ICON_DIR : ICON_FILE);
+  const cls = entry.is_dir ? 'file-tree-item dir' : 'file-tree-item';
+  const onclick = entry.type === 'up' || entry.is_dir
+   ? `loadTree('${escapeJs(entry.path)}')`
+   : `loadFile('${escapeJs(entry.path)}')`;
+  if (entry.type === 'file') {
+   const sizeStr = entry.size > 1024 ? `${(entry.size/1024).toFixed(1)}KB` : `${entry.size}B`;
+   html += `<div class="${cls}" onclick="${onclick}">${icon} <span>${entry.name}</span><span class="ft-size">${sizeStr}</span></div>`;
+  } else {
+   html += `<div class="${cls}" onclick="${onclick}">${icon} <span>${entry.name}</span></div>`;
+  }
+ }
+ document.getElementById('treeContent').innerHTML = html || '<div style="color: var(--text-muted); font-size: 0.8rem; padding: 8px;">No files found.</div>';
+}
+
+function filterTree() {
+ renderTree(document.getElementById('treeSearch').value);
+}
+
+// ── Load / Save / Delete ─────────────────────────
 function loadFile(path) {
  fetch(`/trazezzo/api/editor/read?path=${encodeURIComponent(path)}`)
  .then(r => r.json())
  .then(data => {
- if (data.error) { alert(data.error); return; }
- currentFile = data.path;
- originalContent = data.content;
- document.getElementById('currentPath').textContent = data.path;
- document.getElementById('editorContent').value = data.content;
- document.getElementById('editorContent').disabled = false;
- document.getElementById('saveBtn').disabled = false;
- document.getElementById('deleteBtn').disabled = false;
- const sizeStr = data.size > 1024 ? `${(data.size/1024).toFixed(1)} KB` : `${data.size} bytes`;
- document.getElementById('fileSize').textContent = `${sizeStr} · perms: ${data.permissions}`;
+  if (data.error) { alert(data.error); return; }
+  currentFile = data.path;
+  originalContent = data.content;
+  document.getElementById('currentPath').textContent = data.path;
+  document.getElementById('editorContent').value = data.content;
+  document.getElementById('editorContent').disabled = false;
+  document.getElementById('saveBtn').disabled = false;
+  document.getElementById('deleteBtn').disabled = false;
+  const sizeStr = data.size > 1024 ? `${(data.size/1024).toFixed(1)} KB` : `${data.size} bytes`;
+  document.getElementById('fileSize').textContent = `${sizeStr} · perms: ${data.permissions}`;
  });
 }
 
@@ -123,10 +245,10 @@ function saveFile() {
  })
  .then(r => r.json())
  .then(data => {
- if (data.error) { alert('Error: ' + data.error); return; }
- originalContent = content;
- document.getElementById('backupInfo').textContent = data.backup ? `Backup: ${data.backup.split('/').pop()}` : '';
- alert('Saved! Backup created.');
+  if (data.error) { alert('Error: ' + data.error); return; }
+  originalContent = content;
+  document.getElementById('backupInfo').textContent = data.backup ? `Backup: ${data.backup.split('/').pop()}` : '';
+  alert('Saved! Backup created.');
  });
 }
 
@@ -140,58 +262,81 @@ function deleteFile() {
  })
  .then(r => r.json())
  .then(data => {
- if (data.error) { alert('Error: ' + data.error); return; }
- document.getElementById('editorContent').value = '';
- document.getElementById('editorContent').disabled = true;
- document.getElementById('saveBtn').disabled = true;
- document.getElementById('deleteBtn').disabled = true;
- document.getElementById('currentPath').textContent = 'Select a file to edit';
- currentFile = null;
- loadTree(currentDir);
- alert('Deleted. Backup created.');
+  if (data.error) { alert('Error: ' + data.error); return; }
+  document.getElementById('editorContent').value = '';
+  document.getElementById('editorContent').disabled = true;
+  document.getElementById('saveBtn').disabled = true;
+  document.getElementById('deleteBtn').disabled = true;
+  document.getElementById('currentPath').textContent = 'Select a file to edit';
+  document.getElementById('fileSize').textContent = 'No file selected';
+  currentFile = null;
+  loadTree(currentDir);
+  alert('Deleted. Backup created.');
  });
 }
 
-// Init
-loadTree(currentDir);
-
-// ── Upload file from local laptop ────────────────────────
-function showUploadDialog() {
- // Create hidden file input
+// ── Upload ────────────────────────────────────────
+function showUploadDialog(isFolder = false) {
  const existing = document.getElementById('uploadInput');
  if (existing) existing.remove();
  const input = document.createElement('input');
  input.id = 'uploadInput';
  input.type = 'file';
  input.style.display = 'none';
- input.onchange = (e) => {
- const file = e.target.files[0];
- if (!file) return;
- uploadFile(file);
- input.remove();
+ if (isFolder) {
+  input.webkitdirectory = true;
+  input.multiple = true;
+ } else {
+  input.multiple = true;
+ }
+ input.onchange = async (e) => {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+  for (const file of files) {
+   const relPath = file.webkitRelativePath || file.name;
+   await uploadFile(file, relPath);
+  }
+  loadTree(currentDir);
+  input.remove();
  };
  document.body.appendChild(input);
  input.click();
 }
 
-function uploadFile(file) {
+async function uploadFile(file, relPath) {
  const formData = new FormData();
  formData.append('file', file);
  formData.append('dir', currentDir);
- fetch('/trazezzo/api/editor/upload', {
+ formData.append('rel_path', relPath);
+ try {
+  const resp = await fetch('/trazezzo/api/editor/upload', {
+   method: 'POST',
+   body: formData,
+  });
+  const data = await resp.json();
+  if (data.error) { alert('Error uploading ' + relPath + ': ' + data.error); return; }
+ } catch(e) { alert('Upload error for ' + relPath + ': ' + e.message); }
+}
+
+// ── New file / folder ────────────────────────────
+function showNewFileDialog() {
+ const name = prompt(`Create new file in:\n${currentDir}\n\nFile name:`);
+ if (!name || !name.trim()) return;
+ const fullPath = currentDir.endsWith('/') ? currentDir + name.trim() : currentDir + '/' + name.trim();
+ fetch('/trazezzo/api/editor/write', {
  method: 'POST',
- body: formData,
+ headers: {'Content-Type': 'application/json'},
+ body: JSON.stringify({path: fullPath, content: ''}),
  })
  .then(r => r.json())
  .then(data => {
- if (data.error) { alert('Error: ' + data.error); return; }
- loadTree(currentDir);
- alert(`Uploaded: ${file.name} → ${data.path}`);
+  if (data.error) { alert('Error: ' + data.error); return; }
+  loadTree(currentDir);
+  loadFile(fullPath);
  })
- .catch(e => alert('Upload error: ' + e.message));
+ .catch(e => alert('Error: ' + e.message));
 }
 
-// ── Create new folder ─────────────────────────────────────
 function showMkdirDialog() {
  const name = prompt(`Create new folder in:\n${currentDir}\n\nFolder name:`);
  if (!name || !name.trim()) return;
@@ -203,11 +348,13 @@ function showMkdirDialog() {
  })
  .then(r => r.json())
  .then(data => {
- if (data.error) { alert('Error: ' + data.error); return; }
- loadTree(currentDir);
- alert(`Folder created: ${data.path}`);
+  if (data.error) { alert('Error: ' + data.error); return; }
+  loadTree(currentDir);
  })
  .catch(e => alert('Error: ' + e.message));
 }
+
+// Init
+loadTree(currentDir);
 </script>
 {% endblock %}

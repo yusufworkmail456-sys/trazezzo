@@ -1,0 +1,1593 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trazezzo — Debug & Troubleshooting</title>
+<link rel="icon" type="image/svg+xml" href="/trazezzo-landing/favicon.svg">
+<link rel="shortcut icon" href="/trazezzo-landing/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --primary:#06a284; --primary-dark:#048566; --primary-light:#e6f7f3;
+  --ink:#0b1120; --text:#1e293b; --muted:#64748b; --muted-light:#94a3b8;
+  --surface:#ffffff; --bg:#f8fafc; --border:#e2e8f0; --border-light:#f1f5f9;
+  --code-bg:#0b1120; --code-surface:#1e293b; --code-text:#e2e8f0; --code-muted:#64748b;
+  --success:#22c55e; --warning:#f59e0b; --danger:#ef4444;
+  --radius:14px; --radius-sm:10px; --radius-xs:6px;
+  --font-display:'Space Grotesk',system-ui,sans-serif;
+  --font-body:'Inter',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono','SF Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--primary);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ── Layout ──────────────────────── */
+.layout{display:flex;min-height:100vh}
+
+/* ── Sidebar TOC ─────────────────── */
+.toc{
+  width:280px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);
+  position:fixed;height:100vh;overflow-y:auto;padding:24px 0;z-index:50;
+}
+.toc-header{padding:0 24px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.toc-header .logo-mark{width:28px;height:28px}
+.toc-header .logo-text{font-family:var(--font-display);font-size:1.1rem;font-weight:700;color:var(--ink);letter-spacing:-.02em}
+.toc-header .doc-badge{font-family:var(--font-mono);font-size:.6rem;color:var(--muted-light);background:var(--bg);padding:2px 8px;border-radius:99px;margin-left:auto}
+.toc-search{padding:16px 24px 12px}
+.toc-search input{width:100%;padding:8px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.82rem;font-family:var(--font-body);background:var(--bg);transition:border-color .15s}
+.toc-search input:focus{outline:none;border-color:var(--primary);background:var(--surface)}
+.toc-nav{padding:8px 12px}
+.toc-section{font-family:var(--font-mono);font-size:.66rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-light);padding:16px 12px 6px}
+.toc-item{display:block;padding:6px 12px;font-size:.84rem;color:var(--text);border-radius:var(--radius-sm);transition:all .12s;line-height:1.4;cursor:pointer}
+.toc-item:hover{background:var(--bg);color:var(--primary);text-decoration:none}
+.toc-item.active{background:var(--primary-light);color:var(--primary);font-weight:600}
+.toc-item.sub{padding-left:28px;font-size:.8rem;color:var(--muted)}
+
+/* ── Content ─────────────────────── */
+.content{margin-left:280px;flex:1;padding:48px 56px;max-width:900px;min-width:0}
+.content-header{margin-bottom:48px;padding-bottom:24px;border-bottom:1px solid var(--border)}
+.content-header h1{font-family:var(--font-display);font-size:2.4rem;font-weight:700;color:var(--ink);letter-spacing:-.03em;margin-bottom:8px}
+.content-header .desc{font-size:1.05rem;color:var(--muted)}
+.breadcrumb{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--muted-light);margin-bottom:16px;font-family:var(--font-mono)}
+.breadcrumb a{color:var(--muted)}
+
+/* ── Sections ────────────────────── */
+.section{margin-bottom:56px;scroll-margin-top:24px}
+.section h2{font-family:var(--font-display);font-size:1.6rem;font-weight:700;color:var(--ink);letter-spacing:-.02em;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid var(--border-light)}
+.section h3{font-family:var(--font-display);font-size:1.2rem;font-weight:600;color:var(--ink);margin:28px 0 12px;letter-spacing:-.01em}
+.section h4{font-size:1rem;font-weight:600;color:var(--text);margin:20px 0 8px}
+.section p{margin-bottom:14px;font-size:.92rem;line-height:1.7;color:var(--text)}
+.section ul,.section ol{margin:0 0 16px 20px}
+.section li{margin-bottom:6px;font-size:.92rem;line-height:1.6}
+.section strong{color:var(--ink);font-weight:600}
+
+/* ── Code blocks ─────────────────── */
+.code-block{background:var(--code-bg);border-radius:var(--radius-sm);overflow:hidden;margin:16px 0;border:1px solid #1e293b}
+.code-header{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--code-surface);border-bottom:1px solid #334155}
+.code-header .lang{font-family:var(--font-mono);font-size:.72rem;color:var(--code-muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.code-header .copy-btn{background:none;border:none;color:var(--code-muted);cursor:pointer;font-size:.72rem;font-family:var(--font-mono);transition:color .15s;display:flex;align-items:center;gap:4px}
+.code-header .copy-btn:hover{color:var(--code-text)}
+.code-body{padding:16px 20px;overflow-x:auto}
+.code-body pre{font-family:var(--font-mono);font-size:.82rem;line-height:1.65;color:var(--code-text);white-space:pre}
+.code-body .kw{color:#c084fc}
+.code-body .str{color:#86efac}
+.code-body .com{color:var(--code-muted);font-style:italic}
+.code-body .num{color:#fbbf24}
+.code-body .var{color:#7dd3fc}
+.inline-code{font-family:var(--font-mono);font-size:.84rem;background:var(--primary-light);color:var(--primary-dark);padding:2px 8px;border-radius:4px}
+
+/* ── Callouts ─────────────────────── */
+.callout{padding:16px 20px;border-radius:var(--radius-sm);margin:16px 0;font-size:.88rem;line-height:1.6;border-left:3px solid;display:flex;gap:12px;align-items:flex-start}
+.callout .icon{flex-shrink:0;width:20px;height:20px;margin-top:1px}
+.callout .body{flex:1}
+.callout .body strong{display:block;margin-bottom:4px}
+.callout.info{background:#eff6ff;border-color:#3b82f6;color:#1e40af}
+.callout.warn{background:#fffbeb;border-color:#f59e0b;color:#92400e}
+.callout.danger{background:#fef2f2;border-color:#ef4444;color:#991b1b}
+.callout.tip{background:var(--primary-light);border-color:var(--primary);color:var(--primary-dark)}
+
+/* ── Tables ──────────────────────── */
+.spec-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.88rem}
+.spec-table th{text-align:left;padding:10px 16px;background:var(--surface);border-bottom:2px solid var(--border);color:var(--muted);font-weight:600;font-size:.76rem;text-transform:uppercase;letter-spacing:.04em}
+.spec-table td{padding:10px 16px;border-bottom:1px solid var(--border-light);vertical-align:top}
+.spec-table td:first-child{font-weight:600;color:var(--ink);white-space:nowrap}
+.spec-table tr:hover{background:var(--surface)}
+
+/* ── Badge ───────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:99px;font-size:.72rem;font-weight:600;font-family:var(--font-mono)}
+.badge.req{background:#dcfce7;color:#166534}
+.badge.opt{background:#f1f5f9;color:#64748b}
+.badge.pro{background:var(--primary-light);color:var(--primary-dark)}
+
+/* ── Scrollbar ───────────────────── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+
+/* ── Responsive ──────────────────── */
+@media(max-width:960px){
+  .toc{display:none}
+  .content{margin-left:0;padding:32px 20px}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ── TOC Sidebar ─────────────────── -->
+<aside class="toc">
+  <div class="toc-header">
+    <svg class="logo-mark" viewBox="0 0 36 36" fill="none">
+      <rect width="36" height="36" rx="9" fill="#06a284"/>
+      <path d="M8 14 L14 14 L16 9 L18 19 L20 14 L28 14" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M18 19 L18 27" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </svg>
+    <span class="logo-text">Trazezzo</span>
+    <span class="doc-badge">debug</span>
+  </div>
+  <div class="toc-search">
+    <input type="text" placeholder="Search debug..." id="tocSearch" oninput="filterToc()">
+  </div>
+  <nav class="toc-nav" id="tocNav">
+    <div class="toc-section">Quick Diagnose</div>
+    <a class="toc-item" href="#health-check">Health Check</a>
+    <a class="toc-item" href="#log-check">Log Check</a>
+    <div class="toc-section">Installation Issues</div>
+    <a class="toc-item" href="#python-version">Python Version</a>
+    <a class="toc-item" href="#pip-install">pip install Failure</a>
+    <a class="toc-item" href="#venv">Virtualenv Issues</a>
+    <a class="toc-item" href="#auditd">auditd Not Found</a>
+    <a class="toc-item" href="#bpftrace">eBPF / bpftrace</a>
+    <div class="toc-section">Service Issues</div>
+    <a class="toc-item" href="#service-wont-start">Service Won't Start</a>
+    <a class="toc-item" href="#port-conflict">Port 9122 Conflict</a>
+    <a class="toc-item" href="#permission-denied">Permission Denied</a>
+    <a class="toc-item" href="#dashboard-unreachable">Dashboard Unreachable</a>
+    <div class="toc-section">Nginx & Proxy</div>
+    <a class="toc-item" href="#nginx-502">502 Bad Gateway</a>
+    <a class="toc-item" href="#nginx-ws">WebSocket Failed</a>
+    <a class="toc-item" href="#nginx-sse">SSE / Chat Not Streaming</a>
+    <div class="toc-section">Database & Data</div>
+    <a class="toc-item" href="#sqlite-locked">SQLite Database Locked</a>
+    <a class="toc-item" href="#db-corrupt">Database Corrupt</a>
+    <a class="toc-item" href="#disk-full">Disk Full</a>
+    <div class="toc-section">AI & LLM</div>
+    <a class="toc-item" href="#llm-no-response">LLM No Response</a>
+    <a class="toc-item" href="#llm-api-key">API Key Invalid</a>
+    <a class="toc-item" href="#llm-timeout">LLM Timeout</a>
+    <a class="toc-item" href="#agent-stuck">Agent Mode Stuck</a>
+    <div class="toc-section">Capture Sources</div>
+    <a class="toc-item" href="#journald-empty">Journald Empty</a>
+    <a class="toc-item" href="#auditd-no-events">auditd No Events</a>
+    <a class="toc-item" href="#psutil-wrong">psutil Wrong Metrics</a>
+    <div class="toc-section">Misc</div>
+    <a class="toc-item" href="#git-pull-fail">trazezzo update Fail</a>
+    <a class="toc-item" href="#github-token">GitHub Token Invalid</a>
+    <a class="toc-item" href="#ssl-cert">SSL Certificate Expired</a>
+  </nav>
+</aside>
+
+<!-- ── Main Content ────────────────── -->
+<main class="content">
+
+<div class="content-header">
+  <div class="breadcrumb">
+    <a href="/trazezzo-landing/">Trazezzo</a>
+    <span>/</span>
+    <a href="/trazezzo-landing/docs.html">Docs</a>
+    <span>/</span>
+    <span>Debug</span>
+  </div>
+  <h1>Debug &amp; Troubleshooting</h1>
+  <p class="desc">Panduan troubleshooting untuk error umum saat instalasi, deployment, dan operasional Trazezzo. Quick diagnose, common fixes, step-by-step.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- HEALTH CHECK -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="health-check">
+  <h2>Quick Health Check</h2>
+  <p>Sebelum debugging mendalam, jalankan health check untuk tahu status Trazezzo secara cepat.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="lang">bash</span>
+      <button class="copy-btn" onclick="copyCode(this)">copy</button>
+    </div>
+    <div class="code-body"><pre><span class="com"># 1. Check service status</span>
+systemctl is-active trazezzo
+
+<span class="com"># 2. Check API responds</span>
+curl -s http://localhost:9122/api/overview | python3 -m json.tool
+
+<span class="com"># 3. Check database exists</span>
+ls -lh /var/lib/trazezzo/events.db
+
+<span class="com"># 4. Check port listening</span>
+ss -tlnp | grep 9122
+
+<span class="com"># 5. Check nginx proxy</span>
+curl -s http://localhost/trazezzo/api/overview
+
+<span class="com"># 6. Check LLM connectivity</span>
+curl -s https://9router.amital.co.id/v1/models -H <span class="str">"Authorization: Bearer $HERMES_CUSTOM_9ROUTER_AMITAL_CO_ID_API_KEY"</span>
+
+<span class="com"># 7. Check disk space</span>
+df -h /var/lib/trazezzo/</pre></div>
+  </div>
+
+  <div class="callout tip">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 L3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    <div class="body">
+      <strong>One-liner: trazezzo status</strong>
+      Jalankan <span class="inline-code">trazezzo status</span> untuk summary cepat: service status, hostname, uptime, CPU/RAM, DB size.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- LOG CHECK -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="log-check">
+  <h2>Log Check</h2>
+  <p>Trazezzo logs ke journald. Filter berdasarkan severity untuk cepat menemukan error.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="lang">bash</span>
+      <button class="copy-btn" onclick="copyCode(this)">copy</button>
+    </div>
+    <div class="code-body"><pre><span class="com"># All logs (follow)</span>
+journalctl -u trazezzo -f
+
+<span class="com"># Errors only (last 100)</span>
+journalctl -u trazezzo -p err --no-pager -n 100
+
+<span class="com"># Last 50 lines</span>
+journalctl -u trazezzo --no-pager -n 50
+
+<span class="com"># Since boot</span>
+journalctl -u trazezzo -b
+
+<span class="com"># Specific time range</span>
+journalctl -u trazezzo --since <span class="str">"2024-01-01 00:00:00"</span> --until <span class="str">"2024-01-01 12:00:00"</span>
+
+<span class="com"># Grep for specific error</span>
+journalctl -u trazezzo --no-pager | grep -i <span class="str">"error"</span></pre></div>
+  </div>
+
+  <h3>Common Log Patterns</h3>
+  <table class="spec-table">
+    <thead>
+      <tr><th width="35%">Log Message</th><th width="30%">Severity</th><th width="35%">Section</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="inline-code">Cannot read API key</span></td>
+        <td>ERROR</td>
+        <td><a href="#llm-api-key">API Key Invalid</a></td>
+      </tr>
+      <tr>
+        <td><span class="inline-code">Address already in use</span></td>
+        <td>ERROR</td>
+        <td><a href="#port-conflict">Port Conflict</a></td>
+      </tr>
+      <tr>
+        <td><span class="inline-code">database is locked</span></td>
+        <td>ERROR</td>
+        <td><a href="#sqlite-locked">SQLite Locked</a></td>
+      </tr>
+      <tr>
+        <td><span class="inline-code">Permission denied</span></td>
+        <td>ERROR</td>
+        <td><a href="#permission-denied">Permission Denied</a></td>
+      </tr>
+      <tr>
+        <td><span class="inline-code">eBPF capture not available</span></td>
+        <td>INFO</td>
+        <td><a href="#bpftrace">eBPF / bpftrace</a></td>
+      </tr>
+      <tr>
+        <td><span class="inline-code">Agent daemon started</span></td>
+        <td>INFO</td>
+        <td>Normal startup</td>
+      </tr>
+      <tr>
+        <td><span class="inline-code">Proactive check error</span></td>
+        <td>ERROR</td>
+        <td><a href="#service-wont-start">Service Issues</a></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- PYTHON VERSION -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="python-version">
+  <h2>Python Version Error</h2>
+
+  <div class="callout danger">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      <span class="inline-code">ERROR: Package 'trazezzo' requires a different Python: 3.10.12 not in '&gt;=3.12'</span>
+    </div>
+  </div>
+
+  <p>Trazezzo membutuhkan Python 3.12 atau lebih baru (untuk type hint syntax, match/case, dan performance improvements).</p>
+
+  <h4>Diagnose</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre>python3 --version</pre></div>
+  </div>
+
+  <h4>Fix: Install Python 3.12 (Ubuntu 22.04)</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Add deadsnakes PPA</span>
+apt-get update
+apt-get install -y software-properties-common
+add-apt-repository -y ppa:deadsnakes/ppa
+apt-get update
+
+<span class="com"># Install Python 3.12</span>
+apt-get install -y python3.12 python3.12-venv python3.12-dev
+
+<span class="com"># Verify</span>
+python3.12 --version
+
+<span class="com"># Recreate venv with 3.12</span>
+<span class="kw">cd</span> /opt/trazezzo
+<span class="kw">rm</span> -rf .venv
+python3.12 -m venv .venv
+<span class="kw">source</span> .venv/bin/activate
+pip install -e .</pre></div>
+  </div>
+
+  <h4>Fix: Ubuntu 24.04+ (Python 3.12 sudah default)</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre>python3 --version  <span class="com"># should be 3.12+</span>
+
+<span class="com"># If somehow still old, update python3 symlink</span>
+update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1</pre></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- PIP INSTALL FAILURE -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="pip-install">
+  <h2>pip install Failure</h2>
+
+  <div class="callout danger">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      <span class="inline-code">error: command 'gcc' failed with exit status 1</span> atau <span class="inline-code">fatal error: Python.h: No such file or directory</span>
+    </div>
+  </div>
+
+  <p>Beberapa dependency (psutil, pydantic) butuh compile dari source. Install build tools.</p>
+
+  <h4>Fix</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Install build dependencies</span>
+apt-get install -y build-essential python3.12-dev
+
+<span class="com"># Retry</span>
+pip install -e .</pre></div>
+  </div>
+
+  <h4>Alternative: Use pre-built wheels</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Force binary wheels only (no source build)</span>
+pip install -e . --only-binary :all:
+
+<span class="com"># If that fails, allow fallback</span>
+pip install -e . --prefer-binary</pre></div>
+  </div>
+
+  <div class="callout warn">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div class="body">
+      <strong>psutil compile error on ARM?</strong>
+      psutil mungkin gagal compile di ARM (Raspberry Pi, Graviton). Install <span class="inline-code">apt-get install -y python3.12-dev gcc</span> dan retry. Jika masih gagal, coba <span class="inline-code">pip install psutil==6.0.0</span> (versi yang punya pre-built wheel untuk ARM).
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- VENV ISSUES -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="venv">
+  <h2>Virtualenv Issues</h2>
+
+  <div class="callout danger">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      <span class="inline-code">bash: .venv/bin/activate: No such file or directory</span> atau <span class="inline-code">bash: trazezzo: command not found</span>
+    </div>
+  </div>
+
+  <p>Venv belum dibuat atau rusak. Recreate.</p>
+
+  <h4>Fix</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Delete old venv</span>
+<span class="kw">rm</span> -rf /opt/trazezzo/.venv
+
+<span class="com"># Recreate</span>
+<span class="kw">cd</span> /opt/trazezzo
+python3.12 -m venv .venv
+<span class="kw">source</span> .venv/bin/activate
+pip install -e .
+
+<span class="com"># Re-init (writes systemd service with correct venv path)</span>
+python -m trazezzo.main init
+
+<span class="com"># Restart service</span>
+systemctl daemon-reload
+systemctl restart trazezzo</pre></div>
+  </div>
+
+  <h4>Check venv python path in systemd</h4>
+  <p>Pastikan <span class="inline-code">ExecStart</span> di systemd service menunjuk ke venv python yang benar:</p>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Check</span>
+grep ExecStart /etc/systemd/system/trazezzo.service
+
+<span class="com"># Should be:</span>
+<span class="com"># ExecStart=/opt/trazezzo/.venv/bin/python -m trazezzo.daemon_entry</span>
+
+<span class="com"># If wrong, fix manually or re-run init</span>
+python -m trazezzo.main init</pre></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- AUDITD -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="auditd">
+  <h2>auditd Not Found</h2>
+
+  <div class="callout danger">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      <span class="inline-code">FileNotFoundError: [Errno 2] No such file or directory: '/var/log/audit/audit.log'</span>
+    </div>
+  </div>
+
+  <p>auditd belum terinstall atau belum dienable. Trazezzo butuh auditd untuk security event capture (execve, login, file events).</p>
+
+  <h4>Fix</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Install auditd</span>
+apt-get install -y auditd audispd-plugins
+
+<span class="com"># Enable & start</span>
+systemctl enable --now auditd
+
+<span class="com"># Verify</span>
+systemctl is-active auditd
+ls -la /var/log/audit/audit.log
+
+<span class="com"># Test: generate audit event</span>
+<span class="kw">cat</span> /etc/passwd &gt; /dev/null
+
+<span class="com"># Check audit log captured it</span>
+tail -5 /var/log/audit/audit.log</pre></div>
+  </div>
+
+  <div class="callout warn">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div class="body">
+      <strong>Trazezzo tetap berjalan tanpa auditd</strong>
+      Jika auditd tidak bisa diinstall (container, restricted env), Trazezzo tetap berfungsi — hanya tanpa kernel audit event capture. journald + psutil tetap aktif.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- BPFTRACE -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="bpftrace">
+  <h2>eBPF / bpftrace Not Available</h2>
+
+  <div class="callout warn">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div class="body">
+      <strong>Warning (bukan error)</strong>
+      <span class="inline-code">eBPF capture not available: No module named 'bcc'</span>
+    </div>
+  </div>
+
+  <p>eBPF capture optional. Trazezzo tetap berfungsi penuh tanpa eBPF. Jika ingin kernel syscall tracing:</p>
+
+  <h4>Requirements</h4>
+  <ul>
+    <li>Kernel &gt;= 5.8</li>
+    <li><span class="inline-code">bpftrace</span> terinstall</li>
+    <li><span class="inline-code">python3-bpfcc</span> (Python binding untuk BPF Compiler Collection)</li>
+    <li>Root access (CAP_BPF capability)</li>
+  </ul>
+
+  <h4>Fix</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Check kernel version</span>
+uname -r  <span class="com"># should be >= 5.8</span>
+
+<span class="com"># Install bpftrace + bcc</span>
+apt-get install -y bpftrace python3-bpfcc
+
+<span class="com"># Verify bpftrace works</span>
+bpftrace --version
+
+<span class="com"># Restart Trazezzo</span>
+systemctl restart trazezzo
+
+<span class="com"># Check log — should NOT show "eBPF capture not available"</span>
+journalctl -u trazezzo --no-pager -n 20 | grep -i ebpf</pre></div>
+  </div>
+
+  <div class="callout info">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+    <div class="body">
+      <strong>Container / VM limitations</strong>
+      eBPF tidak akan berfungsi di container tanpa <span class="inline-code">--privileged</span> atau CAP_BPF. Pada VM, pastikan kernel host mendukung BPF (bukan hanya kernel container). Jika tidak memungkinkan, abaikan — Trazezzo tetap punya journald + auditd + psutil.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SERVICE WON'T START -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="service-wont-start">
+  <h2>Service Won't Start</h2>
+
+  <div class="callout danger">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      <span class="inline-code">systemctl status trazezzo</span> shows <span class="inline-code">failed</span> atau <span class="inline-code">inactive (dead)</span>
+    </div>
+  </div>
+
+  <h4>Step 1: Check logs</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre>journalctl -u trazezzo --no-pager -n 50</pre></div>
+  </div>
+
+  <h4>Step 2: Common causes</h4>
+  <table class="spec-table">
+    <thead>
+      <tr><th width="30%">Cause</th><th width="40%">Log Message</th><th width="30%">Fix</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Python not found</td>
+        <td><span class="inline-code">ExecStart=...python: No such file</span></td>
+        <td><a href="#venv">Recreate venv</a></td>
+      </tr>
+      <tr>
+        <td>Port already in use</td>
+        <td><span class="inline-code">Address already in use</span></td>
+        <td><a href="#port-conflict">Port Conflict</a></td>
+      </tr>
+      <tr>
+        <td>Permission denied</td>
+        <td><span class="inline-code">Permission denied: '/var/lib/trazezzo'</span></td>
+        <td><a href="#permission-denied">Permission Denied</a></td>
+      </tr>
+      <tr>
+        <td>Missing dependency</td>
+        <td><span class="inline-code">ModuleNotFoundError: No module named 'fastapi'</span></td>
+        <td><a href="#pip-install">pip install Failure</a></td>
+      </tr>
+      <tr>
+        <td>Invalid config</td>
+        <td><span class="inline-code">KeyError: 'LLM_BASE_URL'</span></td>
+        <td><a href="#llm-api-key">API Key Invalid</a></td>
+      </tr>
+      <tr>
+        <td>SQLite locked</td>
+        <td><span class="inline-code">database is locked</span></td>
+        <td><a href="#sqlite-locked">SQLite Locked</a></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>Step 3: Manual start for debugging</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Run manually to see real-time output</span>
+<span class="kw">cd</span> /opt/trazezzo
+<span class="kw">source</span> .venv/bin/activate
+python -m trazezzo.daemon_entry
+
+<span class="com"># Or with debug logging</span>
+TRAZEZZO_LOG_LEVEL=DEBUG python -m trazezzo.daemon_entry</pre></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- PORT CONFLICT -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="port-conflict">
+  <h2>Port 9122 Already in Use</h2>
+
+  <div class="callout danger">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      <span class="inline-code">OSError: [Errno 98] Address already in use</span>
+    </div>
+  </div>
+
+  <h4>Diagnose</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Find what's using port 9122</span>
+ss -tlnp | grep 9122
+
+<span class="com"># Or with lsof</span>
+lsof -i :9122</pre></div>
+  </div>
+
+  <h4>Fix Option 1: Kill the conflicting process</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Kill by PID (replace 1234 with actual PID)</span>
+<span class="kw">kill</span> 1234
+
+<span class="com"># If stubborn</span>
+<span class="kw">kill</span> -9 1234
+
+<span class="com"># Restart trazezzo</span>
+systemctl restart trazezzo</pre></div>
+  </div>
+
+  <h4>Fix Option 2: Change Trazezzo port</h4>
+  <p>Edit <span class="inline-code">config.py</span> dan nginx config jika port 9122 dibutuhkan oleh service lain.</p>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">config.py</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Change port</span>
+DASHBOARD_PORT = 9123  <span class="com"># instead of 9122</span></pre></div>
+  </div>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">nginx</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Update nginx proxy target</span>
+location /trazezzo/ {
+    proxy_pass http://127.0.0.1:9123/;  <span class="com"># match new port</span>
+    ...
+}</pre></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- PERMISSION DENIED -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="permission-denied">
+  <h2>Permission Denied</h2>
+
+  <div class="callout danger">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      <span class="inline-code">PermissionError: [Errno 13] Permission denied: '/var/lib/trazezzo/events.db'</span>
+    </div>
+  </div>
+
+  <p>Trazezzo butuh root untuk auditd, eBPF, service management, dan file access. Systemd service harus run as <span class="inline-code">User=root</span>.</p>
+
+  <h4>Fix</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Check service user</span>
+grep <span class="str">"^User="</span> /etc/systemd/system/trazezzo.service
+<span class="com"># Should be: User=root</span>
+
+<span class="com"># Fix data directory ownership</span>
+<span class="kw">chown</span> -R root:root /var/lib/trazezzo/
+<span class="kw">chmod</span> 755 /var/lib/trazezzo/
+
+<span class="com"># If running as non-root user, change to root</span>
+sed -i <span class="str">'s/^User=.*/User=root/'</span> /etc/systemd/system/trazezzo.service
+systemctl daemon-reload
+systemctl restart trazezzo</pre></div>
+  </div>
+
+  <div class="callout danger">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="body">
+      <strong>Do NOT run Trazezzo as non-root</strong>
+      Tanpa root: auditd capture gagal, eBPF gagal, <span class="inline-code">systemctl</span> action gagal, <span class="inline-code">journalctl</span> restricted. Trazezzo didesain untuk run as root di server operasional.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- DASHBOARD UNREACHABLE -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="dashboard-unreachable">
+  <h2>Dashboard Unreachable</h2>
+
+  <p>Service running tapi dashboard tidak bisa diakses. Step-by-step diagnose.</p>
+
+  <h4>Step 1: Check service is active</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre>systemctl is-active trazezzo  <span class="com"># should print "active"</span></pre></div>
+  </div>
+
+  <h4>Step 2: Check local API</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Direct to uvicorn</span>
+curl -v http://127.0.0.1:9122/api/overview
+
+<span class="com"># If connection refused → uvicorn not running (check logs)</span>
+<span class="com"># If 200 OK → local works, problem is nginx</span></pre></div>
+  </div>
+
+  <h4>Step 3: Check nginx</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Test nginx config</span>
+nginx -t
+
+<span class="com"># Check trazezzo location is included</span>
+grep -r trazezzo /etc/nginx/
+
+<span class="com"># Reload nginx</span>
+systemctl reload nginx
+
+<span class="com"># Test via nginx</span>
+curl -v http://localhost/trazezzo/api/overview</pre></div>
+  </div>
+
+  <h4>Step 4: Check HTTPS / external</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Test public URL</span>
+curl -v https://your-domain/trazezzo/api/overview
+
+<span class="com"># If SSL error → check cert</span>
+openssl s_client -connect your-domain:443 -servername your-domain &lt;/dev/null 2&gt;/dev/null | openssl x509 -noout -dates
+
+<span class="com"># If timeout → check firewall</span>
+ufw status
+iptables -L -n | grep -E <span class="str">"80|443"</span></pre></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- NGINX 502 -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="nginx-502">
+  <h2>502 Bad Gateway</h2>
+
+  <div class="callout danger">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      Browser menampilkan <strong>502 Bad Gateway</strong> saat mengakses <span class="inline-code">/trazezzo/</span>
+    </div>
+  </div>
+
+  <p>Nginx tidak bisa connect ke uvicorn (port 9122). Penyebab umum:</p>
+
+  <table class="spec-table">
+    <thead>
+      <tr><th width="30%">Cause</th><th width="35%">Check</th><th width="35%">Fix</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Trazezzo service down</td>
+        <td><span class="inline-code">systemctl is-active trazezzo</span></td>
+        <td><span class="inline-code">systemctl start trazezzo</span></td>
+      </tr>
+      <tr>
+        <td>Uvicorn bind 127.0.0.1 only</td>
+        <td><span class="inline-code">ss -tlnp | grep 9122</span></td>
+        <td>Should be <span class="inline-code">127.0.0.1:9122</span> (nginx proxy handles external)</td>
+      </tr>
+      <tr>
+        <td>Wrong proxy_pass in nginx</td>
+        <td><span class="inline-code">grep proxy_pass /etc/nginx/snippets/trazezzo.conf</span></td>
+        <td>Must be <span class="inline-code">http://127.0.0.1:9122/</span></td>
+      </tr>
+      <tr>
+        <td>Uvicorn crashed</td>
+        <td><span class="inline-code">journalctl -u trazezzo -p err -n 20</span></td>
+        <td>Fix error, <span class="inline-code">systemctl restart trazezzo</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout tip">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 L3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    <div class="body">
+      <strong>Quick check</strong>
+      <span class="inline-code">systemctl is-active trazezzo &amp;&amp; curl -s http://127.0.0.1:9122/api/overview | head -1</span> — jika keduanya OK, problem ada di nginx config. Reload: <span class="inline-code">systemctl reload nginx</span>.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- NGINX WS -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="nginx-ws">
+  <h2>WebSocket Connection Failed</h2>
+
+  <div class="callout danger">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      Browser console: <span class="inline-code">WebSocket connection to 'wss://...' failed</span>. Web terminal dan execution panel tidak berfungsi.
+    </div>
+  </div>
+
+  <p>Nginx butuh WebSocket upgrade config. Pastikan snippet trazezzo.conf memiliki:</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="lang">nginx</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre>location /trazezzo/ {
+    proxy_pass http://127.0.0.1:9122/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    <span class="com"># ── WebSocket support (REQUIRED) ──</span>
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection <span class="str">"upgrade"</span>;
+    proxy_read_timeout 86400;
+    proxy_send_timeout 86400;
+
+    <span class="com"># ── SSE / streaming support ──</span>
+    proxy_buffering off;
+    proxy_cache off;
+}</pre></div>
+  </div>
+
+  <h4>Fix</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Re-write nginx snippet (or run trazezzo init)</span>
+python -m trazezzo.main init
+
+<span class="com"># Test & reload</span>
+nginx -t &amp;&amp; systemctl reload nginx</pre></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- NGINX SSE -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="nginx-sse">
+  <h2>SSE / Chat Not Streaming</h2>
+
+  <div class="callout warn">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      Chat response muncul sekaligus di akhir (bukan streaming per-kata). Atau chat timeout setelah 60 detik.
+    </div>
+  </div>
+
+  <p>Nginx buffering response. SSE (Server-Sent Events) butuh <span class="inline-code">proxy_buffering off</span>.</p>
+
+  <h4>Fix</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">nginx</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Add these to trazezzo nginx location block:</span>
+proxy_buffering off;
+proxy_cache off;
+proxy_read_timeout 120s;  <span class="com"># LLM response can take time</span></pre></div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre>nginx -t &amp;&amp; systemctl reload nginx</pre></div>
+  </div>
+
+  <div class="callout info">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+    <div class="body">
+      <strong>Direct (no nginx) works fine?</strong>
+      Jika <span class="inline-code">curl http://127.0.0.1:9122/api/chat</span> streaming dengan benar tapi via nginx tidak, pasti nginx buffering. Check: <span class="inline-code">grep proxy_buffering /etc/nginx/snippets/trazezzo.conf</span> harus return <span class="inline-code">off</span>.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SQLITE LOCKED -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="sqlite-locked">
+  <h2>SQLite Database Locked</h2>
+
+  <div class="callout danger">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      <span class="inline-code">sqlite3.OperationalError: database is locked</span>
+    </div>
+  </div>
+
+  <p>SQLite WAL mode biasanya handle concurrent read/write. Tapi jika terjadi lock:</p>
+
+  <h4>Fix</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Check for stale lock files</span>
+ls -la /var/lib/trazezzo/events.db*
+
+<span class="com"># Check WAL mode</span>
+sqlite3 /var/lib/trazezzo/events.db <span class="str">"PRAGMA journal_mode;"</span>
+<span class="com"># Should return: wal</span>
+
+<span class="com"># If stuck, checkpoint WAL</span>
+sqlite3 /var/lib/trazezzo/events.db <span class="str">"PRAGMA wal_checkpoint(TRUNCATE);"</span>
+
+<span class="com"># If still locked, restart service (releases all connections)</span>
+systemctl restart trazezzo
+
+<span class="com"># Nuclear option: delete WAL/SHM files (service must be stopped)</span>
+systemctl stop trazezzo
+<span class="kw">rm</span> /var/lib/trazezzo/events.db-wal /var/lib/trazezzo/events.db-shm
+systemctl start trazezzo</pre></div>
+  </div>
+
+  <div class="callout warn">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div class="body">
+      <strong>Recurring lock? Check for separated mode</strong>
+      Jika menggunakan separated mode (agent + dashboard proses terpisah), pastikan keduanya menggunakan <span class="inline-code">TRAZEZZO_DATA_DIR</span> yang sama. SQLite WAL mendukung multi-process, tapi path harus identik.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- DB CORRUPT -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="db-corrupt">
+  <h2>Database Corrupt</h2>
+
+  <div class="callout danger">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      <span class="inline-code">sqlite3.DatabaseError: database disk image is malformed</span>
+    </div>
+  </div>
+
+  <h4>Fix: Recover what you can, recreate</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre>systemctl stop trazezzo
+
+<span class="com"># Try to recover data</span>
+sqlite3 /var/lib/trazezzo/events.db .dump &gt; /tmp/trazezzo_dump.sql 2&gt;/dev/null
+
+<span class="com"># Backup corrupt db</span>
+<span class="kw">mv</span> /var/lib/trazezzo/events.db /var/lib/trazezzo/events.db.corrupt.$(date +%s)
+
+<span class="com"># Recreate from dump (if dump has data)</span>
+sqlite3 /var/lib/trazezzo/events.db &lt; /tmp/trazezzo_dump.sql
+
+<span class="com"># Or just start fresh (lose event history)</span>
+<span class="kw">rm</span> /var/lib/trazezzo/events.db*
+
+systemctl start trazezzo</pre></div>
+  </div>
+
+  <div class="callout info">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+    <div class="body">
+      <strong>Losing event history is OK</strong>
+      Trazezzo event store adalah warm cache (7 hari retention). Kehilangan data tidak menghentikan operasi. Services, configs, dan system state tidak disimpan di SQLite — hanya event history untuk timeline dan activity feed.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- DISK FULL -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="disk-full">
+  <h2>Disk Full</h2>
+
+  <div class="callout danger">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      <span class="inline-code">OSError: [Errno 28] No space left on device</span> atau service crash berulang.
+    </div>
+  </div>
+
+  <h4>Diagnose</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Check disk</span>
+df -h
+
+<span class="com"># Check Trazezzo DB size</span>
+ls -lh /var/lib/trazezzo/
+
+<span class="com"># Check journal size</span>
+journalctl --disk-usage</pre></div>
+  </div>
+
+  <h4>Fix</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># 1. Vacuum journal (biggest win usually)</span>
+journalctl --vacuum-time=2d
+journalctl --vacuum-size=100M
+
+<span class="com"># 2. Clean apt cache</span>
+apt-get clean
+
+<span class="com"># 3. Archive old Trazezzo events (manual sync)</span>
+<span class="kw">cd</span> /opt/trazezzo
+<span class="kw">source</span> .venv/bin/activate
+python -c <span class="str">"from trazezzo.modules.sync import archive_warm_to_cold; print(archive_warm_to_cold())"</span>
+
+<span class="com"># 4. If DB itself is huge, prune old events manually</span>
+sqlite3 /var/lib/trazezzo/events.db <span class="str">"DELETE FROM events WHERE ts &lt; datetime('now', '-3 days');"</span>
+sqlite3 /var/lib/trazezzo/events.db <span class="str">"VACUUM;"</span>
+
+<span class="com"># 5. Restart</span>
+systemctl restart trazezzo</pre></div>
+  </div>
+
+  <div class="callout tip">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 L3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    <div class="body">
+      <strong>Enable aggressive mode for auto-cleanup</strong>
+      <span class="inline-code">POST /api/proactive/mode {"mode":"aggressive"}</span> — Trazezzo akan auto-cleanup journal + apt cache saat disk &gt;95%.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- LLM NO RESPONSE -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="llm-no-response">
+  <h2>LLM No Response</h2>
+
+  <div class="callout warn">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      Chat mengirim pesan tapi tidak ada response. Atau response error: <span class="inline-code">Connection error</span>.
+    </div>
+  </div>
+
+  <h4>Diagnose</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># 1. Check LLM endpoint reachable</span>
+curl -s -o /dev/null -w <span class="str">"%{http_code}"</span> https://9router.amital.co.id/v1/models
+
+<span class="com"># 2. Check with API key</span>
+<span class="kw">source</span> /root/.hermes/.env
+curl -s https://9router.amital.co.id/v1/models \
+  -H <span class="str">"Authorization: Bearer $HERMES_CUSTOM_9ROUTER_AMITAL_CO_ID_API_KEY"</span> \
+  | python3 -m json.tool
+
+<span class="com"># 3. Check Trazezzo logs for LLM errors</span>
+journalctl -u trazezzo --no-pager | grep -i <span class="str">"llm\|api key\|9router"</span></pre></div>
+  </div>
+
+  <h4>Common Causes</h4>
+  <table class="spec-table">
+    <thead>
+      <tr><th width="30%">Cause</th><th width="35%">Check</th><th width="35%">Fix</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>API key missing/wrong</td>
+        <td><span class="inline-code">grep 9ROUTER /root/.hermes/.env</span></td>
+        <td><a href="#llm-api-key">API Key Fix</a></td>
+      </tr>
+      <tr>
+        <td>9router down</td>
+        <td><span class="inline-code">curl .../v1/models</span> returns non-200</td>
+        <td>Wait / check 9router service</td>
+      </tr>
+      <tr>
+        <td>DNS resolution fail</td>
+        <td><span class="inline-code">nslookup 9router.amital.co.id</span></td>
+        <td>Fix DNS / <span class="inline-code">systemctl restart systemd-resolved</span></td>
+      </tr>
+      <tr>
+        <td>Firewall blocking outbound</td>
+        <td><span class="inline-code">curl -v https://9router...</span> timeout</td>
+        <td>Allow outbound HTTPS</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- LLM API KEY -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="llm-api-key">
+  <h2>LLM API Key Invalid</h2>
+
+  <div class="callout danger">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      <span class="inline-code">Cannot read API key from /root/.hermes/.env: ...</span> atau <span class="inline-code">401 Unauthorized</span> dari 9router.
+    </div>
+  </div>
+
+  <p>Trazezzo membaca API key dari file env Hermes. Key name: <span class="inline-code">HERMES_CUSTOM_9ROUTER_AMITAL_CO_ID_API_KEY</span>.</p>
+
+  <h4>Diagnose</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Check env file exists</span>
+ls -la /root/.hermes/.env
+
+<span class="com"># Check key is present (don't print value)</span>
+grep -c <span class="str">"HERMES_CUSTOM_9ROUTER_AMITAL_CO_ID_API_KEY"</span> /root/.hermes/.env
+<span class="com"># Should print: 1</span>
+
+<span class="com"># Check config.py points to right file</span>
+grep -E <span class="str">"LLM_ENV_KEY_NAME|LLM_ENV_PATH"</span> /opt/trazezzo/trazezzo/config.py</pre></div>
+  </div>
+
+  <h4>Fix</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Add key to Hermes env file (if missing)</span>
+<span class="kw">echo</span> <span class="str">"HERMES_CUSTOM_9ROUTER_AMITAL_CO_ID_API_KEY=your-key-here"</span> &gt;&gt; /root/.hermes/.env
+
+<span class="com"># If key exists but wrong → get correct key from 9router dashboard
+
+# Restart Trazezzo to pick up new key</span>
+systemctl restart trazezzo
+
+<span class="com"># Test chat</span>
+curl -X POST http://localhost:9122/api/chat \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"message":"halo","mode":"reasoning"}'</span></pre></div>
+  </div>
+
+  <div class="callout info">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+    <div class="body">
+      <strong>Using different LLM provider?</strong>
+      Edit <span class="inline-code">config.py</span>: <span class="inline-code">LLM_BASE_URL</span>, <span class="inline-code">LLM_MODEL</span>, <span class="inline-code">LLM_ENV_KEY_NAME</span>, <span class="inline-code">LLM_ENV_PATH</span>. Any OpenAI-compatible API works (Ollama, vLLM, LM Studio, OpenAI direct).
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- LLM TIMEOUT -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="llm-timeout">
+  <h2>LLM Timeout</h2>
+
+  <div class="callout warn">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      <span class="inline-code">httpx.ReadTimeout</span> atau chat response terputus setelah 60 detik.
+    </div>
+  </div>
+
+  <p>Default timeout 60s (non-streaming) / 120s (streaming). LLM yang lambat atau model besar bisa timeout.</p>
+
+  <h4>Fix: Increase timeout in llm.py</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">llm.py</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># chat_completion: increase timeout</span>
+async with httpx.AsyncClient(timeout=120.0) as client:  <span class="com"># was 60.0</span>
+
+<span class="com"># chat_completion_stream: increase timeout</span>
+async with httpx.AsyncClient(timeout=300.0) as client:  <span class="com"># was 120.0</span></pre></div>
+  </div>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre>systemctl restart trazezzo</pre></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- AGENT STUCK -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="agent-stuck">
+  <h2>Agent Mode Stuck</h2>
+
+  <div class="callout warn">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      Agent mode tidak menyelesaikan task. Chat spinning tanpa hasil. Atau agent berulang eksekusi command yang sama.
+    </div>
+  </div>
+
+  <p>Agent mode memiliki max 8 round. Jika LLM terus propose action tanpa konklusi, akan berhenti setelah 8 round dengan <span class="inline-code">"Max execution rounds reached."</span></p>
+
+  <h4>Common Causes</h4>
+  <ul>
+    <li>LLM tidak membaca execution result dengan baik → tambahkan instruksi lebih spesifik di prompt</li>
+    <li>Command yang dieksekusi gagal berulang → LLM tidak tahu cara alternatif</li>
+    <li>Command timeout (default 60s) → LLM tidak dapat result</li>
+  </ul>
+
+  <h4>Fix</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">chat_agent.py</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Increase max rounds</span>
+max_rounds = 12  <span class="com"># was 8</span>
+
+<span class="com"># Increase command timeout</span>
+MAX_EXEC_TIMEOUT = 120  <span class="com"># was 60</span>
+
+<span class="com"># Increase max output per command</span>
+MAX_OUTPUT = 8000  <span class="com"># was 4000</span></pre></div>
+  </div>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre>systemctl restart trazezzo</pre></div>
+  </div>
+
+  <div class="callout tip">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 L3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    <div class="body">
+      <strong>Agent stuck di command yang sama?</strong>
+      Clear chat history (tombol 🗑 di chat panel) lalu coba lagi dengan instruksi lebih spesifik. Contoh: bukan "fix nginx" tapi "baca /etc/nginx/nginx.conf, cari syntax error, fix, restart nginx".
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- JOURNALD EMPTY -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="journald-empty">
+  <h2>Journald Capture Empty</h2>
+
+  <div class="callout warn">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      Activity feed / timeline kosong. Tidak ada event dari journald source.
+    </div>
+  </div>
+
+  <h4>Diagnose</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Check journald works</span>
+journalctl --no-pager -n 5
+
+<span class="com"># Check Trazezzo capture log</span>
+journalctl -u trazezzo --no-pager | grep -i journald
+
+<span class="com"># Check if capture is enabled in config</span>
+grep CAPTURE_JOURNALD /opt/trazezzo/trazezzo/config.py
+<span class="com"># Should be: CAPTURE_JOURNALD = True</span></pre></div>
+  </div>
+
+  <h4>Fix</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># If journald itself is empty, check storage</span>
+journalctl --disk-usage
+
+<span class="com"># If 0, journal might be disabled</span>
+<span class="com"># Check journald config</span>
+grep -i storage /etc/systemd/journald.conf
+<span class="com"># Should be: Storage=persistent (or auto)</span>
+
+<span class="com"># Fix: enable persistent storage</span>
+sed -i <span class="str">'s/#Storage=auto/Storage=persistent/'</span> /etc/systemd/journald.conf
+systemctl restart systemd-journald
+
+<span class="com"># Restart Trazezzo</span>
+systemctl restart trazezzo</pre></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- AUDITD NO EVENTS -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="auditd-no-events">
+  <h2>auditd No Events Captured</h2>
+
+  <div class="callout warn">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      Event dari auditd source tidak muncul di activity feed.
+    </div>
+  </div>
+
+  <h4>Diagnose</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Check auditd running</span>
+systemctl is-active auditd
+
+<span class="com"># Check audit log exists & has recent entries</span>
+ls -la /var/log/audit/audit.log
+tail -3 /var/log/audit/audit.log
+
+<span class="com"># Check Trazezzo can read it</span>
+<span class="kw">source</span> /opt/trazezzo/.venv/bin/activate
+python -c <span class="str">"from trazezzo.agent.capture.auditd import capture_auditd; print('import OK')"</span>
+
+<span class="com"># Check capture enabled</span>
+grep CAPTURE_AUDITD /opt/trazezzo/trazezzo/config.py</pre></div>
+  </div>
+
+  <h4>Fix</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Install & enable if missing</span>
+apt-get install -y auditd
+systemctl enable --now auditd
+
+<span class="com"># Generate test event</span>
+<span class="kw">cat</span> /etc/shadow &gt; /dev/null 2&gt;&amp;1
+
+<span class="com"># Check log appeared</span>
+sleep 1
+tail -5 /var/log/audit/audit.log
+
+<span class="com"># Restart Trazezzo</span>
+systemctl restart trazezzo</pre></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- PSUTIL WRONG -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="psutil-wrong">
+  <h2>psutil Shows Wrong Metrics</h2>
+
+  <div class="callout warn">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      CPU menampilkan 0% atau 100% terus. Memory tidak sesuai. Disk usage salah.
+    </div>
+  </div>
+
+  <h4>Cause: psutil first call returns 0.0 for CPU</h4>
+  <p><span class="inline-code">psutil.cpu_percent()</span> return 0.0 pada first call (tidak ada baseline). Trazezzo menggunakan <span class="inline-code">interval=0.5</span> yang seharusnya mengatasi ini, tapi bisa gagal pada system yang sangat cepat.</p>
+
+  <h4>Fix: Warm up psutil</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">system.py</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Add warmup call before actual measurement</span>
+psutil.cpu_percent(interval=None)  <span class="com"># non-blocking warmup</span>
+<span class="kw">import</span> time
+time.sleep(0.1)
+cpu_percent = psutil.cpu_percent(interval=0.5)  <span class="com"># now accurate</span></pre></div>
+  </div>
+
+  <h4>Cause: Container metrics</h4>
+  <p>Di container (Docker/Podman), psutil menampilkan metrics host, bukan container. Gunakan <span class="inline-code">/proc</span> filesystem atau cgroup metrics untuk akurasi.</p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- GIT PULL FAIL -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="git-pull-fail">
+  <h2>trazezzo update Fail</h2>
+
+  <div class="callout danger">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      <span class="inline-code">git pull failed: error: Your local changes to the following files would be overwritten by merge</span>
+    </div>
+  </div>
+
+  <h4>Fix</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="kw">cd</span> /opt/trazezzo
+
+<span class="com"># Option 1: Stash local changes, pull, restore</span>
+git stash
+git pull origin main
+git stash pop
+pip install -e .
+systemctl restart trazezzo
+
+<span class="com"># Option 2: Discard local changes (lose modifications!)</span>
+git checkout .
+git pull origin main
+pip install -e .
+systemctl restart trazezzo
+
+<span class="com"># Option 3: If merge conflicts on stash pop</span>
+git mergetool  <span class="com"># resolve manually</span>
+pip install -e .
+systemctl restart trazezzo</pre></div>
+  </div>
+
+  <div class="callout warn">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div class="body">
+      <strong>Not a git repository?</strong>
+      Jika <span class="inline-code">trazezzo update</span> gagal dengan "Not a git repository", Trazezzo diinstall tanpa git clone. Fix: <span class="inline-code">cd /opt/trazezzo && git init && git remote add origin https://github.com/yusufworkmail456-sys/trazezzo.git && git fetch && git checkout main</span>.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- GITHUB TOKEN -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="github-token">
+  <h2>GitHub Token Invalid</h2>
+
+  <div class="callout danger">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      GitHub page menampilkan <span class="inline-code">"Invalid or expired token"</span>. Atau agent <span class="inline-code">git_push</span> tool gagal.
+    </div>
+  </div>
+
+  <h4>Fix: Re-save token</h4>
+  <ol>
+    <li>Buat new Personal Access Token (PAT) di GitHub → Settings → Developer settings → Personal access tokens</li>
+    <li>Buka Trazezzo dashboard → <span class="inline-code">/trazezzo/github</span></li>
+    <li>Klik "Reset Token", paste new PAT, save</li>
+  </ol>
+
+  <p>Atau via API:</p>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Delete old token</span>
+<span class="kw">rm</span> /var/lib/trazezzo/github_token.json
+
+<span class="com"># Save new token via Python</span>
+<span class="kw">source</span> /opt/trazezzo/.venv/bin/activate
+python -c <span class="str">"from trazezzo.modules.github import save_token; print(save_token('ghp_your_new_token_here'))"</span></pre></div>
+  </div>
+
+  <h4>Required PAT scopes</h4>
+  <ul>
+    <li><span class="inline-code">repo</span> — full control of private repos (for push + PR)</li>
+    <li><span class="inline-code">read:org</span> — if accessing org repos</li>
+  </ul>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SSL CERT -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="ssl-cert">
+  <h2>SSL Certificate Expired</h2>
+
+  <div class="callout danger">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="body">
+      <strong>Error</strong>
+      Browser: <span class="inline-code">NET::ERR_CERT_DATE_INVALID</span>. Dashboard tidak bisa diakses via HTTPS.
+    </div>
+  </div>
+
+  <h4>Diagnose</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Check cert expiry</span>
+openssl s_client -connect your-domain:443 -servername your-domain &lt;/dev/null 2&gt;/dev/null \
+  | openssl x509 -noout -dates
+
+<span class="com"># Or use Trazezzo's built-in scanner</span>
+curl -s http://localhost:9122/api/security | python3 -m json.tool | grep -A2 <span class="str">"days_left"</span></pre></div>
+  </div>
+
+  <h4>Fix: Renew Let's Encrypt</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="lang">bash</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+    <div class="code-body"><pre><span class="com"># Renew with certbot</span>
+certbot renew
+
+<span class="com"># Reload nginx to pick up new cert</span>
+systemctl reload nginx
+
+<span class="com"># Verify</span>
+openssl s_client -connect your-domain:443 -servername your-domain &lt;/dev/null 2&gt;/dev/null \
+  | openssl x509 -noout -dates</pre></div>
+  </div>
+
+  <div class="callout tip">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 L3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    <div class="body">
+      <strong>Auto-renewal</strong>
+      Setup cron: <span class="inline-code">0 3 * * * certbot renew --quiet &amp;&amp; systemctl reload nginx</span> — renew check setiap hari jam 3 pagi. Trazezzo SSL scanner juga mengingatkan saat cert akan expired dalam 30 hari.
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+// ── Copy code button ──────────────────
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('pre').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'copied!';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
+}
+
+// ── TOC active tracking ──────────────
+const tocItems = document.querySelectorAll('.toc-item');
+const sections = document.querySelectorAll('.section');
+
+function updateActiveToc() {
+  let current = '';
+  sections.forEach(s => {
+    const rect = s.getBoundingClientRect();
+    if (rect.top <= 100) current = s.id;
+  });
+  tocItems.forEach(item => {
+    item.classList.toggle('active', item.getAttribute('href') === '#' + current);
+  });
+}
+window.addEventListener('scroll', updateActiveToc);
+updateActiveToc();
+
+// ── TOC search filter ────────────────
+function filterToc() {
+  const q = document.getElementById('tocSearch').value.toLowerCase();
+  let lastSection = null;
+  document.querySelectorAll('.toc-nav > *').forEach(el => {
+    if (el.classList.contains('toc-section')) {
+      lastSection = el;
+      el.style.display = '';
+    }
+    if (el.classList.contains('toc-item')) {
+      const match = el.textContent.toLowerCase().includes(q);
+      el.style.display = match ? '' : 'none';
+    }
+  });
+}
+
+// ── Smooth scroll with offset ────────
+tocItems.forEach(item => {
+  item.addEventListener('click', (e) => {
+    e.preventDefault();
+    const target = document.querySelector(item.getAttribute('href'));
+    if (target) {
+      const offset = 20;
+      const top = target.getBoundingClientRect().top + window.pageYOffset - offset;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+  });
+});
+</script>
+</body>
+</html>

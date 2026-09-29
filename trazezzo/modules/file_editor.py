@@ -8,10 +8,7 @@ from pathlib import Path
 
 # ── Allowed root directories for browsing ────────────────────────────
 ALLOWED_ROOTS = [
-    "/etc",
-    "/root",
-    "/var/lib/trazezzo",
-    "/opt/trazezzo",
+    "/",
 ]
 
 # ── Dangerous paths that should never be edited ───────────────────────
