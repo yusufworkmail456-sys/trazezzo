@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trazezzo — Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --primary: #06a284;
+            --primary-hover: #048566;
+            --primary-light: rgba(6, 162, 132, 0.12);
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --text-light: #64748b;
+            --border: #334155;
+            --error: #ef4444;
+            --font-display: 'Space Grotesk', system-ui, sans-serif;
+            --font-body: 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* ── Login card ─────────────────── */
+        .login-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px 36px;
+            width: 380px;
+            max-width: 90vw;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            position: relative;
+            z-index: 10;
+        }
+
+        /* ── Logo ───────────────────────── */
+        .login-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+
+        .login-logo svg {
+            width: 44px;
+            height: 44px;
+            filter: drop-shadow(0 0 12px rgba(6, 162, 132, 0.4));
+        }
+
+        .login-logo h1 {
+            font-family: var(--font-display);
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.02em;
+        }
+
+        .login-logo .subtitle {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-family: var(--font-body);
+            font-weight: 400;
+        }
+
+        /* ── Form ──────────────────────── */
+        .login-field {
+            margin-bottom: 16px;
+        }
+
+        .login-field label {
+            display: block;
+            font-size: 0.76rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .login-field input {
+            width: 100%;
+            padding: 11px 14px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.88rem;
+            font-family: var(--font-body);
+            transition: all 0.15s;
+        }
+
+        .login-field input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+
+        .login-field input::placeholder {
+            color: var(--text-light);
+        }
+
+        .login-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--error);
+            padding: 9px 14px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .login-error.show {
+            display: block;
+            animation: shake 0.4s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            font-family: var(--font-body);
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-top: 4px;
+        }
+
+        .login-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .login-btn:active {
+            transform: scale(0.98);
+        }
+
+        .login-footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.72rem;
+            color: var(--text-light);
+        }
+
+        /* ── Splash overlay ─────────────── */
+        .splash-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .splash-overlay.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .splash-logo {
+            animation: splash-pop 0.5s ease;
+        }
+
+        .splash-logo svg {
+            width: 72px;
+            height: 72px;
+            filter: drop-shadow(0 0 24px rgba(6, 162, 132, 0.5));
+        }
+
+        @keyframes splash-pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            60% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .splash-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .splash-text {
+            font-family: var(--font-display);
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+        }
+    </style>
+</head>
+<body>
+    <!-- ── Login card ──────────────── -->
+    <div class="login-card">
+        <div class="login-logo">
+            <svg viewBox="0 0 36 36" fill="none">
+                <rect width="36" height="36" rx="9" fill="#06a284"/>
+                <path d="M8 14 L14 14 L16 9 L18 19 L20 14 L28 14" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M18 19 L18 27" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+            </svg>
+            <div>
+                <h1>Trazezzo</h1>
+                <div class="subtitle">AI-Native Server Operations</div>
+            </div>
+        </div>
+
+        <div class="login-error" id="loginError">Invalid username or password</div>
+
+        <form id="loginForm" onsubmit="return doLogin(event)">
+            <div class="login-field">
+                <label>Username</label>
+                <input type="text" id="username" placeholder="admin" autocomplete="username" required autofocus>
+            </div>
+            <div class="login-field">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required>
+            </div>
+            <button type="submit" class="login-btn" id="loginBtn">Sign In</button>
+        </form>
+
+        <div class="login-footer">Trazezzo · trace everything</div>
+    </div>
+
+    <!-- ── Splash overlay ──────────── -->
+    <div class="splash-overlay" id="splashOverlay">
+        <div class="splash-logo">
+            <svg viewBox="0 0 36 36" fill="none">
+                <rect width="36" height="36" rx="9" fill="#06a284"/>
+                <path d="M8 14 L14 14 L16 9 L18 19 L20 14 L28 14" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M18 19 L18 27" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <div class="splash-spinner"></div>
+        <div class="splash-text">Entering Trazezzo...</div>
+    </div>
+
+    <script>
+    async function doLogin(e) {
+        e.preventDefault();
+        const btn = document.getElementById('loginBtn');
+        const err = document.getElementById('loginError');
+        btn.disabled = true;
+        btn.textContent = 'Signing in...';
+        err.classList.remove('show');
+
+        try {
+            const resp = await fetch('/trazezzo/api/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value,
+                }),
+            });
+
+            if (resp.ok) {
+                // Show splash animation
+                document.getElementById('splashOverlay').classList.add('show');
+                // Redirect after animation
+                setTimeout(() => {
+                    window.location.href = '/trazezzo/';
+                }, 1500);
+            } else {
+                const data = await resp.json();
+                err.textContent = data.detail || 'Invalid username or password';
+                err.classList.add('show');
+                btn.disabled = false;
+                btn.textContent = 'Sign In';
+            }
+        } catch(e) {
+            err.textContent = 'Connection error: ' + e.message;
+            err.classList.add('show');
+            btn.disabled = false;
+            btn.textContent = 'Sign In';
+        }
+        return false;
+    }
+    </script>
+</body>
+</html>

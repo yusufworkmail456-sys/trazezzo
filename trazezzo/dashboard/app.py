@@ -11,11 +11,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, Request, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from trazezzo.config import DASHBOARD_HOST, DASHBOARD_PORT, PROACTIVE_MODE
+from trazezzo.config import DASHBOARD_HOST, DASHBOARD_PORT, PROACTIVE_MODE, AUTH_USERNAME, AUTH_PASSWORD, SESSION_SECRET
 from trazezzo.agent.store.sqlite_warm import get_store
 from trazezzo.dashboard.ws import websocket_endpoint
 
@@ -29,8 +29,82 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 app = FastAPI(title="Trazezzo", version="0.1.0")
 templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
 
+# ── Session middleware ──────────────────────────────────────────────
+from starlette.middleware.sessions import SessionMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+import secrets
+_session_secret = SESSION_SECRET if SESSION_SECRET != "trazezzo-session-secret-change-me" else secrets.token_hex(32)
+
+
+def check_auth(request: Request) -> bool:
+    """Check if user is authenticated via session."""
+    return request.session.get("authenticated") is True
+
+
+class AuthMiddleware(BaseHTTPMiddleware):
+    """Redirect to login if not authenticated."""
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        # Allow: login page, login API, static files, health check
+        public_paths = ["/login", "/api/auth/login", "/api/auth/logout", "/static"]
+        if any(path.startswith(p) for p in public_paths) or path == "/":
+            return await call_next(request)
+
+        if not check_auth(request):
+            if path.startswith("/api/") or path.startswith("/ws/"):
+                return JSONResponse(status_code=401, content={"detail": "Not authenticated"})
+            return RedirectResponse(url="/trazezzo/login", status_code=302)
+
+        return await call_next(request)
+
+
+# Order matters: SessionMiddleware FIRST (outer), AuthMiddleware SECOND (inner)
+app.add_middleware(AuthMiddleware)
+app.add_middleware(SessionMiddleware, secret_key=_session_secret)
+
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+# ── Auth ──────────────────────────────────────────────────────────────
+
+def check_auth(request: Request) -> bool:
+    """Check if user is authenticated via session."""
+    return request.session.get("authenticated") is True
+
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    """Login page."""
+    if check_auth(request):
+        return RedirectResponse(url="/trazezzo/", status_code=302)
+    return templates.TemplateResponse(request, "login.html", {"request": request})
+
+
+@app.post("/api/auth/login")
+async def api_login(request: Request):
+    """Login endpoint — validate credentials, set session."""
+    import hmac
+    body = await request.json()
+    username = body.get("username", "")
+    password = body.get("password", "")
+
+    user_ok = hmac.compare_digest(username, AUTH_USERNAME)
+    pass_ok = hmac.compare_digest(password, AUTH_PASSWORD)
+
+    if not (user_ok and pass_ok):
+        return JSONResponse(status_code=401, content={"detail": "Invalid username or password"})
+
+    request.session["authenticated"] = True
+    request.session["username"] = username
+    return {"success": True}
+
+
+@app.post("/api/auth/logout")
+async def api_logout(request: Request):
+    """Logout endpoint — clear session."""
+    request.session.clear()
+    return {"success": True}
 
 
 # ── Pages ─────────────────────────────────────────────────────────────

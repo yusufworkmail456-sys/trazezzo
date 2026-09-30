@@ -17,6 +17,11 @@ CONFIG_PATH = DATA_DIR / "config.json"
 DASHBOARD_HOST = "127.0.0.1"
 DASHBOARD_PORT = 9122
 
+# ── Auth ────────────────────────────────────────────────────────────────
+AUTH_USERNAME = os.environ.get("TRAZEZZO_AUTH_USERNAME", "admin")
+AUTH_PASSWORD = os.environ.get("TRAZEZZO_AUTH_PASSWORD", "trazezzo")
+SESSION_SECRET = os.environ.get("TRAZEZZO_SESSION_SECRET", "trazezzo-session-secret-change-me")
+
 # ── Retention ──────────────────────────────────────────────────────────
 WARM_RETENTION_DAYS = 7
 RING_BUFFER_HOT_SECONDS = 300  # 5 min in-memory
