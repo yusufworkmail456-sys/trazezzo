@@ -177,6 +177,7 @@ a:hover{text-decoration:underline}
     <a class="toc-item" href="#vs-cli">Trazezzo vs CLI</a>
     <div class="toc-section">Reference</div>
     <a class="toc-item" href="#config">Configuration</a>
+    <a class="toc-item" href="#auth">Authentication</a>
     <a class="toc-item" href="#api">API Endpoints</a>
     <a class="toc-item" href="#cli">CLI Commands</a>
   </nav>
@@ -1041,8 +1042,60 @@ curl -X POST http://localhost:9122/api/approvals/{id}/reject</pre></div>
       <tr><td><code>LLM_MODEL</code></td><td>coding</td><td>LLM model name. Sesuaikan dengan provider (e.g. <code>gpt-4o</code>, <code>llama3.2</code>).</td></tr>
       <tr><td><code>LLM_ENV_KEY_NAME</code></td><td>NINEROUTER_API_KEY</td><td>Env key name untuk API key. Bisa <code>OPENAI_API_KEY</code>, <code>OLLAMA_API_KEY</code>, dll.</td></tr>
       <tr><td><code>LLM_ENV_PATH</code></td><td>/etc/trazezzo/.env</td><td>Path ke file env yang berisi API key.</td></tr>
+      <tr><td><code>AUTH_USERNAME</code></td><td>admin</td><td>Dashboard login username. Override via <code>TRAZEZZO_AUTH_USERNAME</code> env.</td></tr>
+      <tr><td><code>AUTH_PASSWORD</code></td><td>trazezzo</td><td>Dashboard login password. Override via <code>TRAZEZZO_AUTH_PASSWORD</code> env. <strong>Change in production!</strong></td></tr>
+      <tr><td><code>SESSION_SECRET</code></td><td>auto-generated</td><td>Session cookie signing secret. Override via <code>TRAZEZZO_SESSION_SECRET</code> env for persistent sessions across restarts.</td></tr>
     </tbody>
   </table>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- AUTHENTICATION -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="auth">
+  <h2>Authentication</h2>
+  <p>Trazezzo dilengkapi login page untuk mengamankan akses dashboard. Session-based auth menggunakan signed cookies (SessionMiddleware).</p>
+
+  <h3>Default Credentials</h3>
+  <table class="spec-table">
+    <thead><tr><th>Field</th><th>Default</th><th>Env Variable</th></tr></thead>
+    <tbody>
+      <tr><td>Username</td><td><code>admin</code></td><td><code>TRAZEZZO_AUTH_USERNAME</code></td></tr>
+      <tr><td>Password</td><td><code>trazezzo</code></td><td><code>TRAZEZZO_AUTH_PASSWORD</code></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-warning">
+    <strong>⚠️ Change default credentials in production!</strong> Set via environment variables in systemd service or <code>.env</code> file.
+  </div>
+
+  <h3>Changing Credentials</h3>
+  <p>Edit systemd service file (<code>/etc/systemd/system/trazezzo.service</code>):</p>
+  <pre><code>[Service]
+Environment=TRAZEZZO_AUTH_USERNAME=myuser
+Environment=TRAZEZZO_AUTH_PASSWORD=strong-password-here
+Environment=TRAZEZZO_SESSION_SECRET=your-random-secret-string</code></pre>
+  <p>Then reload and restart:</p>
+  <pre><code>systemctl daemon-reload
+systemctl restart trazezzo</code></pre>
+
+  <h3>Login Flow</h3>
+  <ol>
+    <li>Akses <code>/trazezzo/</code> → auto-redirect ke <code>/trazezzo/login</code> jika belum authenticated</li>
+    <li>Login page: dark theme, logo Trazezzo, username + password field</li>
+    <li>Setelah login berhasil → splash animation (logo + spinner) → redirect ke dashboard</li>
+    <li>Session disimpan di signed cookie (HttpOnly, SameSite)</li>
+    <li>Logout button di topbar → clear session → kembali ke login</li>
+  </ol>
+
+  <h3>Security Notes</h3>
+  <ul>
+    <li>Password comparison menggunakan <code>hmac.compare_digest</code> (timing-safe)</li>
+    <li>Session secret auto-generated jika tidak di-set (berubah setiap restart → session hilang)</li>
+    <li>Set <code>TRAZEZZO_SESSION_SECRET</code> untuk session persisten across restarts</li>
+    <li>WebSocket endpoints (<code>/ws/*</code>) juga memerlukan authentication</li>
+    <li>API endpoints (<code>/api/*</code>) return 401 JSON jika tidak authenticated</li>
+  </ul>
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
@@ -1075,6 +1128,25 @@ curl -X POST http://localhost:9122/api/approvals/{id}/reject</pre></div>
       <tr><td><code>POST</code></td><td>/api/approvals/{id}/approve</td><td>Approve &amp; execute a pending action</td></tr>
       <tr><td><code>POST</code></td><td>/api/approvals/{id}/reject</td><td>Reject a pending action</td></tr>
       <tr><td><code>WS</code></td><td>/ws/exec</td><td>WebSocket: real-time agent execution stream</td></tr>
+      <tr><td><code>GET</code></td><td>/login</td><td>Login page (public, no auth required)</td></tr>
+      <tr><td><code>POST</code></td><td>/api/auth/login</td><td>Authenticate user, set session cookie</td></tr>
+      <tr><td><code>POST</code></td><td>/api/auth/logout</td><td>Clear session, redirect to login</td></tr>
+      <tr><td><code>GET</code></td><td>/api/ssh/connections</td><td>List SSH connection profiles</td></tr>
+      <tr><td><code>POST</code></td><td>/api/ssh/connections</td><td>Create SSH connection profile</td></tr>
+      <tr><td><code>PUT</code></td><td>/api/ssh/connections/{id}</td><td>Update SSH connection profile</td></tr>
+      <tr><td><code>DELETE</code></td><td>/api/ssh/connections/{id}</td><td>Delete SSH connection profile</td></tr>
+      <tr><td><code>POST</code></td><td>/api/ssh/connections/{id}/test</td><td>Test SSH connection</td></tr>
+      <tr><td><code>GET</code></td><td>/api/ssh/keys</td><td>List SSH keys (vault + ~/.ssh/)</td></tr>
+      <tr><td><code>POST</code></td><td>/api/ssh/keys/upload</td><td>Upload private key to vault</td></tr>
+      <tr><td><code>DELETE</code></td><td>/api/ssh/keys/{id}</td><td>Delete vault key</td></tr>
+      <tr><td><code>GET</code></td><td>/api/editor/ls</td><td>List directory contents</td></tr>
+      <tr><td><code>GET</code></td><td>/api/editor/read</td><td>Read file content</td></tr>
+      <tr><td><code>POST</code></td><td>/api/editor/write</td><td>Write file (auto-backup)</td></tr>
+      <tr><td><code>POST</code></td><td>/api/editor/delete</td><td>Delete file (auto-backup)</td></tr>
+      <tr><td><code>POST</code></td><td>/api/editor/upload</td><td>Upload file/folder</td></tr>
+      <tr><td><code>POST</code></td><td>/api/editor/mkdir</td><td>Create directory</td></tr>
+      <tr><td><code>WS</code></td><td>/ws/ssh/{conn_id}</td><td>WebSocket: SSH terminal session (remote)</td></tr>
+      <tr><td><code>WS</code></td><td>/ws/terminal</td><td>WebSocket: local terminal session</td></tr>
     </tbody>
   </table>
 </section>
