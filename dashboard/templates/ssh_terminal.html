@@ -11,9 +11,12 @@
     display: grid;
     grid-template-columns: 280px 1fr;
     gap: 0;
-    height: calc(100vh - 130px);
-    margin: -24px -28px 0;
+    height: calc(100vh - 48px);
+    margin: -24px -28px -24px;
     transition: grid-template-columns 0.22s ease;
+}
+@media (max-width: 900px) {
+    .ssh-layout { margin: -14px -14px -14px; height: calc(100vh - 48px); }
 }
 .ssh-layout.sidebar-collapsed {
     grid-template-columns: 0px 1fr;

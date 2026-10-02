@@ -59,6 +59,29 @@ BLOCKED_RE = [re.compile(p, re.IGNORECASE) for p in BLOCKED_PATTERNS]
 MAX_EXEC_TIMEOUT = 60
 MAX_OUTPUT = 4000  # chars per command output
 
+# ── Cancel support ───────────────────────────────────────────────────
+import threading
+
+_cancel_flag = threading.Event()
+_running_procs: list[subprocess.Popen] = []
+_proc_lock = threading.Lock()
+
+
+def cancel_agent():
+    """Cancel the running agent loop and kill any subprocess."""
+    _cancel_flag.set()
+    with _proc_lock:
+        for proc in _running_procs:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+        _running_procs.clear()
+
+
+def _clear_cancel():
+    _cancel_flag.clear()
+
 
 def is_command_safe(cmd: str) -> tuple[bool, str]:
     """Check if a command is safe to execute."""
@@ -75,18 +98,30 @@ def execute_command(cmd: str, timeout: int = MAX_EXEC_TIMEOUT) -> dict:
         return {"success": False, "error": reason, "command": cmd}
 
     try:
-        proc = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, timeout=timeout,
+        proc = subprocess.Popen(
+            cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, start_new_session=True,
         )
+        with _proc_lock:
+            _running_procs.append(proc)
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.communicate()
+            return {"success": False, "error": f"Command timed out ({timeout}s)", "command": cmd}
+        finally:
+            with _proc_lock:
+                if proc in _running_procs:
+                    _running_procs.remove(proc)
+
         return {
             "success": proc.returncode == 0,
             "exit_code": proc.returncode,
-            "stdout": proc.stdout[-MAX_OUTPUT:] if proc.stdout else "",
-            "stderr": proc.stderr[-MAX_OUTPUT:] if proc.stderr else "",
+            "stdout": stdout[-MAX_OUTPUT:] if stdout else "",
+            "stderr": stderr[-MAX_OUTPUT:] if stderr else "",
             "command": cmd,
         }
-    except subprocess.TimeoutExpired:
-        return {"success": False, "error": f"Command timed out ({timeout}s)", "command": cmd}
     except Exception as exc:
         return {"success": False, "error": str(exc), "command": cmd}
 
@@ -274,8 +309,14 @@ async def run_agent(
         })
 
     max_rounds = 8  # max action-execution rounds
+    _clear_cancel()
 
     for round_num in range(max_rounds):
+        # Check cancel
+        if _cancel_flag.is_set():
+            yield json.dumps({"type": "cancelled", "message": "Agent cancelled by user."})
+            return
+
         # Get LLM response (non-streaming for agent mode — we need full text to parse actions)
         try:
             response = await chat_completion(messages, temperature=0.4, max_tokens=2000)
@@ -304,6 +345,10 @@ async def run_agent(
         # Execute each action and collect results
         observation_parts = []
         for action in actions:
+            if _cancel_flag.is_set():
+                yield json.dumps({"type": "cancelled", "message": "Agent cancelled by user."})
+                return
+
             yield json.dumps({"type": "action", "action": action})
 
             result = execute_tool(action)

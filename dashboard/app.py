@@ -415,7 +415,7 @@ async def api_chat(request: Request):
     """AI chatbot endpoint — talk to your server. Supports text + image."""
     body = await request.json()
     user_message = body.get("message", "")
-    mode = body.get("mode", "reasoning")  # reasoning | coding
+    mode = body.get("mode", "reasoning")  # reasoning | agent
     image_data = body.get("image", None)  # base64 image (data URI)
 
     from trazezzo.modules.system import get_system_overview
@@ -539,13 +539,41 @@ async def api_chat(request: Request):
     else:
         messages.append({"role": "user", "content": user_content_parts[0]})
 
+    # Vision-capable model fallback when image is provided
+    VISION_MODEL = "bp/skylark-vision-250515"
+    use_vision = bool(image_data)
+
     async def stream():
         try:
-            async for chunk in chat_completion_stream(messages, temperature=0.5, max_tokens=1500):
+            # Try vision model first if image provided
+            model_to_use = VISION_MODEL if use_vision else None
+            async for chunk in chat_completion_stream(
+                messages, temperature=0.5, max_tokens=1500,
+                model=model_to_use,
+            ):
+                if "chunk" in chunk or "error" in chunk:
+                    pass
                 yield f"data: {json.dumps({'chunk': chunk})}\n\n"
             yield "data: [DONE]\n\n"
         except Exception as exc:
-            yield f"data: {json.dumps({'error': str(exc)})}\n\n"
+            err_msg = str(exc)
+            # If vision model fails, fall back to default model with a note
+            if use_vision and ("503" in err_msg or "404" in err_msg or "400" in err_msg):
+                # Add image note to messages
+                messages.append({
+                    "role": "system",
+                    "content": "Catatan: User mengirim gambar, tetapi model saat ini tidak mendukung input gambar (vision). Mohon informasikan kepada user bahwa gambar tidak dapat dilihat dan sarankan untuk mendeskripsikan gambar secara teks."
+                })
+                try:
+                    async for chunk in chat_completion_stream(
+                        messages, temperature=0.5, max_tokens=1500,
+                    ):
+                        yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+                    yield "data: [DONE]\n\n"
+                except Exception as exc2:
+                    yield f"data: {json.dumps({'error': str(exc2)})}\n\n"
+            else:
+                yield f"data: {json.dumps({'error': err_msg})}\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream")
 
@@ -799,6 +827,14 @@ async def api_causal_timeline(minutes: int = 30, before: str | None = None):
 
 
 # ── Proactive Mode Toggle ─────────────────────────────────────────────
+
+@app.post("/api/chat/cancel")
+async def api_cancel_agent():
+    """Cancel the running agent loop and kill subprocesses."""
+    from trazezzo.agent.chat_agent import cancel_agent
+    cancel_agent()
+    return {"success": True, "message": "Agent cancelled."}
+
 
 @app.get("/api/proactive/status")
 async def api_proactive_status():

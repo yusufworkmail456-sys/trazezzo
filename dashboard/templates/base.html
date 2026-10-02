@@ -46,6 +46,17 @@
             line-height: 1.5;
         }
 
+        /* ── Chat panel toggle button ────────── */
+        #chatToggleBtn.active { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+
+        /* Hidden mode: hide AI panel only, keep sidebar */
+        body.layout-hidden { --chat-w: 0px; }
+        body.layout-hidden .chat-panel { display: none; }
+        body.layout-hidden .topbar { right: 0; }
+        body.layout-hidden .main { margin-right: 0; }
+
+        @media (max-width: 900px) { #chatToggleBtn { display: none; } }
+
         /* ── Sidebar ──────────────────────────── */
         .sidebar {
             width: var(--sidebar-w);
@@ -407,9 +418,15 @@
         .chat-msg.user .bubble { background: var(--primary); color: white; border-bottom-right-radius: 4px; }
         .chat-msg.bot .bubble { background: var(--bg); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
         .chat-msg.bot .bubble pre { font-size: 0.78rem; background: #0f172a; color: #e2e8f0; padding: 10px; border-radius: var(--radius-sm); overflow-x: auto; margin: 4px 0; }
-        .chat-input { display: flex; gap: 6px; padding: 12px; border-top: 1px solid var(--border); }
-        .chat-input input { flex: 1; padding: 9px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.85rem; font-family: var(--font-body); transition: border-color 0.15s; }
+        .chat-input { padding: 12px; border-top: 1px solid var(--border); }
+        .chat-input-row { display: flex; gap: 6px; align-items: center; width: 100%; }
+        .chat-input input { flex: 1; width: 100%; min-width: 0; padding: 9px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.85rem; font-family: var(--font-body); transition: border-color 0.15s; }
         .chat-input input:focus { outline: none; border-color: var(--primary); }
+        .chat-attach-btn {
+            width: 36px; height: 36px; flex-shrink: 0; border: 1px solid var(--border); border-radius: var(--radius-sm);
+            background: var(--surface); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+        }
+        .chat-attach-btn:hover { border-color: var(--primary); color: var(--primary); }
         .image-preview { position: relative; padding: 6px; border-bottom: 1px solid var(--border); }
         .image-preview img { max-width: 100%; max-height: 120px; border-radius: var(--radius-sm); display: block; }
         .remove-img-btn { position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; border: none; border-radius: 50%; background: rgba(0,0,0,0.6); color: white; cursor: pointer; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; }
@@ -420,6 +437,39 @@
             display: flex; align-items: center; justify-content: center; transition: all 0.15s;
         }
         .chat-clear-btn:hover { border-color: var(--error); color: var(--error); }
+
+        /* ── Custom modal ──────────────────────── */
+        .modal-overlay {
+            position: fixed; inset: 0; z-index: 9999;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.18s ease;
+        }
+        .modal-overlay.show { opacity: 1; pointer-events: auto; }
+        .modal-box {
+            background: var(--surface); border-radius: 14px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+            max-width: 420px; width: 90%; padding: 24px;
+            transform: scale(0.92); transition: transform 0.2s ease;
+        }
+        .modal-overlay.show .modal-box { transform: scale(1); }
+        .modal-icon { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+        .modal-icon.info { background: #eff6ff; color: #2563eb; }
+        .modal-icon.success { background: #dcfce7; color: #16a34a; }
+        .modal-icon.warning { background: #fef3c7; color: #d97706; }
+        .modal-icon.error { background: #fee2e2; color: #dc2626; }
+        .modal-icon svg { width: 22px; height: 22px; }
+        .modal-title { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; color: var(--ink); text-align: center; margin-bottom: 8px; }
+        .modal-message { font-size: 0.85rem; color: var(--text); text-align: center; line-height: 1.5; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+        .modal-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+        .modal-btn { padding: 9px 22px; border-radius: var(--radius-sm); font-size: 0.85rem; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text); transition: all 0.15s; }
+        .modal-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .modal-btn-primary { background: var(--primary); color: white; border-color: var(--primary); }
+        .modal-btn-primary:hover { background: var(--primary-hover); }
+        .modal-btn-danger { background: #dc2626; color: white; border-color: #dc2626; }
+        .modal-btn-danger:hover { background: #b91c1c; }
 
         /* ── Terminal ──────────────────────────── */
         .terminal { background: #0f172a; color: #e2e8f0; padding: 16px; border-radius: var(--radius); font-family: var(--font-mono); font-size: 0.82rem; height: calc(100vh - 200px); overflow-y: auto; }
@@ -536,6 +586,10 @@
             <span id="topbarPage">{% block topbar_title %}Overview{% endblock %}</span>
         </div>
         <div class="actions">
+            <button class="topbar-btn" id="chatToggleBtn" onclick="toggleChatPanel()" title="Toggle AI Assistant">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>
+                <span>AI</span>
+            </button>
             <div class="topbar-tools">
                 <a href="/trazezzo/ssh" class="topbar-tool-btn" title="Terminal">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m6 8 2 2-2 2"/><path d="M11 12h4"/></svg>
@@ -550,16 +604,9 @@
                     <span>Cron</span>
                 </a>
             </div>
-            <div class="proactive-indicator">
-                <span class="mode-pill" id="topbarMode">Calm</span>
-            </div>
             <button class="topbar-btn" onclick="doLogout()" title="Logout" style="border-color: var(--border);">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                 <span>Logout</span>
-            </button>
-            <button class="topbar-btn" id="execPanelBtn" onclick="toggleExecPanel()" style="display:none;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                <span id="execBadge" style="background:var(--warning); color:#1e1e1e; padding:1px 6px; border-radius:10px; font-size:0.68rem; font-weight:700;">0</span>
             </button>
         </div>
     </div>
@@ -568,14 +615,19 @@
         {% block content %}{% endblock %}
     </div>
 
-    <!-- Execution panel -->
+    <!-- Agent reasoning panel (aggressive mode only) -->
     <div class="exec-panel" id="execPanel">
         <div class="exec-panel-header">
-            <div class="label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Agent Execution</div>
-            <button class="ctrl-btn" onclick="toggleExecPanel()" title="Close">&times;</button>
+            <div class="label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Agent Activity</div>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <button class="ctrl-btn" id="cancelAgentBtn" onclick="cancelAgent()" title="Cancel agent" style="background: #dc2626; display: none;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+                </button>
+                <button class="ctrl-btn" onclick="toggleExecPanel()" title="Close">&times;</button>
+            </div>
         </div>
         <div class="exec-panel-body" id="execPanelBody">
-            <div style="color: #64748b; font-size: 0.8rem; text-align: center; padding: 20px;">No executions yet. Agent actions will appear here in real-time.</div>
+            <div style="color: #64748b; font-size: 0.8rem; text-align: center; padding: 20px;">No agent activity yet. In Aggressive mode, agent actions will appear here in real-time.</div>
         </div>
     </div>
 
@@ -587,10 +639,6 @@
                 <button class="chat-expand-btn" onclick="toggleChatExpand()" title="Expand chat"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/><polyline points="15 18 15 18 21 12"/></svg></button>
                 <button class="chat-clear-btn" onclick="clearChat()" title="Clear chat history"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
                 <div class="mode-toggle">
-                    <button class="mode-btn active" id="chatModeReasoning" onclick="setChatMode('reasoning')">Q&amp;A</button>
-                    <button class="mode-btn" id="chatModeAgent" onclick="setChatMode('agent')">Agent</button>
-                </div>
-                <div class="mode-toggle" style="margin-left: 6px;">
                     <button class="mode-btn active" id="modeCalm" onclick="setProactiveMode('calm')">Calm</button>
                     <button class="mode-btn" id="modeAggressive" onclick="setProactiveMode('aggressive')">Aggressive</button>
                 </div>
@@ -613,8 +661,22 @@
                 <button class="remove-img-btn" onclick="removeImage()">&times;</button>
             </div>
             <div class="chat-input-row">
+                <button class="chat-attach-btn" onclick="document.getElementById('fileInput').click()" title="Attach image">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                </button>
+                <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFileSelect(event)">
                 <input type="text" id="chatInput" placeholder="Tanya servermu... (Ctrl+V untuk paste gambar)" onkeypress="if(event.key==='Enter') sendChat()">
             </div>
+        </div>
+    </div>
+
+    <!-- Custom modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-box" id="modalBox">
+            <div class="modal-icon info" id="modalIcon"></div>
+            <div class="modal-title" id="modalTitle"></div>
+            <div class="modal-message" id="modalMessage"></div>
+            <div class="modal-actions" id="modalActions"></div>
         </div>
     </div>
 
@@ -624,6 +686,113 @@
     <script>
 
     let termWs = null;
+
+    // ── Custom modal system (replaces native alert/confirm) ────────
+    const MODAL_ICONS = {
+        info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+        success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+        warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+        error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+        question: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    };
+
+    function showModal({icon='info', title='', message='', actions=[]}) {
+        return new Promise((resolve) => {
+            const overlay = document.getElementById('modalOverlay');
+            const iconEl = document.getElementById('modalIcon');
+            const titleEl = document.getElementById('modalTitle');
+            const msgEl = document.getElementById('modalMessage');
+            const actionsEl = document.getElementById('modalActions');
+
+            iconEl.className = `modal-icon ${icon}`;
+            iconEl.innerHTML = MODAL_ICONS[icon] || MODAL_ICONS.info;
+            titleEl.textContent = title;
+            titleEl.style.display = title ? 'block' : 'none';
+            msgEl.innerHTML = message;
+            actionsEl.innerHTML = '';
+
+            if (!actions.length) {
+                actions = [{label: 'OK', primary: true, value: true}];
+            }
+
+            actions.forEach(act => {
+                const btn = document.createElement('button');
+                btn.className = 'modal-btn' + (act.primary ? ' modal-btn-primary' : '') + (act.danger ? ' modal-btn-danger' : '');
+                btn.textContent = act.label;
+                btn.onclick = () => {
+                    overlay.classList.remove('show');
+                    resolve(act.value);
+                };
+                actionsEl.appendChild(btn);
+            });
+
+            overlay.classList.add('show');
+
+            // Close on backdrop click
+            overlay.onclick = (e) => {
+                if (e.target === overlay) {
+                    overlay.classList.remove('show');
+                    resolve(null);
+                }
+            };
+
+            // ESC to cancel
+            const escHandler = (e) => {
+                if (e.key === 'Escape') {
+                    overlay.classList.remove('show');
+                    document.removeEventListener('keydown', escHandler);
+                    resolve(null);
+                }
+            };
+            document.addEventListener('keydown', escHandler);
+        });
+    }
+
+    // Override native alert globally
+    window.alert = function(message, icon='info', title='') {
+        return showModal({icon, title, message: String(message), actions: [{label: 'OK', primary: true, value: true}]});
+    };
+
+    // Promise-based confirm replacement
+    function showConfirm(message, opts={}) {
+        return showModal({
+            icon: opts.icon || 'question',
+            title: opts.title || '',
+            message: message,
+            actions: [
+                {label: opts.cancelText || 'Batal', value: false},
+                {label: opts.confirmText || 'Lanjut', primary: true, danger: opts.danger, value: true},
+            ],
+        });
+    }
+
+    // ── Chat panel toggle (show/hide AI panel) ───────────────
+    const CHAT_VISIBLE_KEY = 'trazezzo_chat_visible';
+    function toggleChatPanel() {
+        const hidden = document.body.classList.toggle('layout-hidden');
+        document.getElementById('chatToggleBtn').classList.toggle('active', !hidden);
+        try { localStorage.setItem(CHAT_VISIBLE_KEY, hidden ? '0' : '1'); } catch(e) {}
+        setTimeout(() => {
+            if (typeof activeTabs !== 'undefined' && activeTabs) {
+                activeTabs.forEach(t => {
+                    if (t.termEl && t.termEl.classList.contains('active') && t.fitAddon) {
+                        t.fitAddon.fit();
+                    }
+                });
+            }
+        }, 300);
+    }
+    // Restore saved chat panel state on load
+    (function restoreChatPanel() {
+        let hidden = false;
+        try { hidden = localStorage.getItem(CHAT_VISIBLE_KEY) === '0'; } catch(e) {}
+        if (hidden) {
+            document.body.classList.add('layout-hidden');
+            document.getElementById('chatToggleBtn').classList.remove('active');
+        } else {
+            document.getElementById('chatToggleBtn').classList.add('active');
+        }
+    })();
 
     // ── Proactive mode init ──────────────────────────────────
     (async function initMode() {
@@ -637,20 +806,28 @@
     function updateModeUI(mode) {
         const calm = document.getElementById('modeCalm');
         const aggr = document.getElementById('modeAggressive');
-        const topMode = document.getElementById('topbarMode');
+        const input = document.getElementById('chatInput');
         if (mode === 'aggressive') {
             calm.classList.remove('active');
             aggr.classList.add('active', 'warn');
-            if (topMode) topMode.textContent = 'Aggressive';
+            currentChatMode = 'agent';
+            if (input) input.placeholder = 'Agent mode: jelaskan masalah, aku akan eksekusi perbaikan...';
         } else {
             calm.classList.add('active');
             aggr.classList.remove('active', 'warn');
-            if (topMode) topMode.textContent = 'Calm';
+            currentChatMode = 'reasoning';
+            if (input) input.placeholder = 'Tanya servermu... (Ctrl+V untuk paste gambar)';
         }
     }
 
-    function setProactiveMode(mode) {
-        if (mode === 'aggressive' && !confirm('Switch to AGGRESSIVE mode?\n\nAgent akan propose auto-remediation commands yang butuh approval kamu sebelum dieksekusi:\n- Restart failed services\n- Kill OOM processes\n- Clean disk space\n- Renice high CPU processes\n\nLanjut?')) return;
+    async function setProactiveMode(mode) {
+        if (mode === 'aggressive') {
+            const confirmed = await showConfirm(
+                'Agent akan propose auto-remediation commands yang butuh approval kamu sebelum dieksekusi:\n\n- Restart failed services\n- Kill OOM processes\n- Clean disk space\n- Renice high CPU processes',
+                {icon: 'warning', title: 'Switch to AGGRESSIVE mode?', confirmText: 'Lanjut', danger: true}
+            );
+            if (!confirmed) return;
+        }
         fetch('/trazezzo/api/proactive/mode', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -660,26 +837,16 @@
         .then(data => {
             if (data.success) {
                 updateModeUI(data.mode);
-                addMessage(`✅ Proactive mode: ${data.mode.toUpperCase()}. ${data.mode === 'aggressive' ? 'Approval required sebelum eksekusi.' : 'Advisory only.'}`, 'bot');
+                const input = document.getElementById('chatInput');
+                if (data.mode === 'aggressive') {
+                    input.placeholder = 'Agent mode: jelaskan masalah, aku akan eksekusi perbaikan...';
+                } else {
+                    input.placeholder = 'Tanya servermu... (Ctrl+V untuk paste gambar)';
+                }
+                addMessage(`✅ Mode: ${data.mode.toUpperCase()}. ${data.mode === 'aggressive' ? 'Agent bisa action dengan persetujuan.' : 'Q&A read-only.'}`, 'bot');
                 if (data.mode === 'aggressive') loadApprovals();
             }
         });
-    }
-
-    function setChatMode(mode) {
-        currentChatMode = mode;
-        const reasoning = document.getElementById('chatModeReasoning');
-        const agent = document.getElementById('chatModeAgent');
-        const input = document.getElementById('chatInput');
-        if (mode === 'agent') {
-            reasoning.classList.remove('active');
-            agent.classList.add('active');
-            input.placeholder = 'Agent mode: jelaskan masalah, aku akan eksekusi perbaikan...';
-        } else {
-            reasoning.classList.add('active');
-            agent.classList.remove('active');
-            input.placeholder = 'Tanya servermu... (Ctrl+V untuk paste gambar)';
-        }
     }
 
     // ── Pending approvals (aggressive mode) ──────────────────
@@ -749,7 +916,7 @@
             }
         } catch(e) { console.error('Load chat error:', e); }
         // No history — show welcome
-        addBotMessage('Halo! Aku Trazezzo AI. Tanya apapun tentang servermu.<br><br><span style="font-size:0.78rem; color: var(--text-muted);">Mode <b>Calm</b>: advisory only. <b>Aggressive</b>: auto-remediate.</span>');
+        addBotMessage('Halo! Aku Trazezzo AI. Tanya apapun tentang servermu.<br><br><span style="font-size:0.78rem; color: var(--text-muted);">Mode <b>Calm</b>: tanya jawab read-only. <b>Aggressive</b>: agent bisa action dengan persetujuan.</span>');
     }
 
     function saveChatHistory() {
@@ -785,13 +952,33 @@
         return div;
     }
 
+    // Chat mode is derived from proactive mode: calm = 'reasoning', aggressive = 'agent'
     let currentImage = null;  // base64 data URI
-    let currentChatMode = 'reasoning'; // reasoning | agent
+    let currentChatMode = 'reasoning'; // updated by updateModeUI
 
     function removeImage() {
         currentImage = null;
         document.getElementById('imagePreview').style.display = 'none';
         document.getElementById('previewImg').src = '';
+    }
+
+    function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            alert('Hanya file gambar yang didukung.', 'warning');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            currentImage = ev.target.result;
+            document.getElementById('previewImg').src = currentImage;
+            document.getElementById('imagePreview').style.display = 'block';
+            document.getElementById('chatInput').focus();
+        };
+        reader.readAsDataURL(file);
+        // Reset input so same file can be selected again
+        event.target.value = '';
     }
 
     // Image paste handler (Ctrl+V)
@@ -817,12 +1004,20 @@
         }
     });
 
-    function clearChat() {
-        if (!confirm('Hapus seluruh chat history?')) return;
+    async function clearChat() {
+        const confirmed = await showConfirm('Hapus seluruh chat history?', {icon: 'warning', title: 'Clear Chat', confirmText: 'Hapus', danger: true});
+        if (!confirmed) return;
         chatHistory = [];
         localStorage.removeItem(CHAT_STORAGE_KEY);
         document.getElementById('chatMessages').innerHTML = '';
         removeImage();
+        // Also clear agent activity panel
+        const execBody = document.getElementById('execPanelBody');
+        if (execBody) {
+            execBody.innerHTML = '<div style="color: #64748b; font-size: 0.8rem; text-align: center; padding: 20px;">No agent activity yet.</div>';
+        }
+        execCount = 0;
+        reasoningItem = null;
         addBotMessage('Chat dihapus. Tanya apa saja tentang servermu.');
     }
 
@@ -850,7 +1045,16 @@
 
         try {
             if (currentChatMode === 'agent') {
-                // Agent mode: handle structured events
+                // Agent mode: reasoning goes to exec panel, chat shows summary only
+                const cancelBtn = document.getElementById('cancelAgentBtn');
+                if (cancelBtn) cancelBtn.style.display = 'flex';
+
+                // Auto-open exec panel
+                const execPanel = document.getElementById('execPanel');
+                if (!execPanel.classList.contains('open')) {
+                    execPanel.classList.add('open');
+                }
+
                 const resp = await fetch('/trazezzo/api/chat', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -858,8 +1062,9 @@
                 });
                 const reader = resp.body.getReader();
                 const decoder = new TextDecoder();
-                let fullText = '';
-                bubble.innerHTML = '';
+                let summaryText = '';
+                let reasoningText = '';
+                bubble.innerHTML = '<span style="color: var(--text-muted); font-size: 0.8rem;">⏳ Agent sedang bekerja... Lihat panel <b>Agent Activity</b> →</span>';
 
                 while (true) {
                     const {done, value} = await reader.read();
@@ -872,21 +1077,33 @@
                             try {
                                 const parsed = JSON.parse(dataStr);
                                 if (parsed.type === 'text' && parsed.chunk) {
-                                    fullText += parsed.chunk;
-                                    bubble.innerHTML = fullText;
+                                    // Agent reasoning text → exec panel
+                                    reasoningText += parsed.chunk;
+                                    addExecReasoningChunk(parsed.chunk);
                                 } else if (parsed.type === 'action') {
+                                    // Action → exec panel
                                     const a = parsed.action;
-                                    fullText += `<div style="background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; margin: 6px 0; font-family: monospace; font-size: 0.78rem;">🔧 <b>${escapeHtml(a.tool)}</b>: ${escapeHtml(a.command || a.path || a.repo_path || JSON.stringify(a))}</div>`;
-                                    bubble.innerHTML = fullText;
+                                    addExecItem({
+                                        command: `${a.tool}: ${a.command || a.path || a.repo_path || JSON.stringify(a)}`,
+                                        source: 'agent',
+                                        success: undefined,
+                                    });
                                 } else if (parsed.type === 'result') {
+                                    // Result → exec panel
                                     const r = parsed.result;
-                                    const status = r.success ? '✅' : '❌';
-                                    const output = (r.stdout || r.content || r.stderr || r.error || '').slice(0, 500);
-                                    fullText += `<div style="font-size: 0.75rem; color: ${r.success ? 'var(--success)' : 'var(--error)'}; margin: 4px 0 8px;">${status} <pre style="margin: 2px 0; white-space: pre-wrap; font-size: 0.72rem;">${escapeHtml(output)}</pre></div>`;
-                                    bubble.innerHTML = fullText;
+                                    addExecItem({
+                                        command: r.command || 'result',
+                                        source: 'result',
+                                        success: r.success,
+                                        output: (r.stdout || r.content || '').slice(0, 500),
+                                        stderr: (r.stderr || r.error || '').slice(0, 500),
+                                    });
                                 } else if (parsed.type === 'done') {
-                                    if (parsed.summary) fullText += `\n<div style="margin-top: 6px; font-size: 0.8rem; color: var(--text-muted);">— ${escapeHtml(parsed.summary.slice(0, 200))}</div>`;
-                                    bubble.innerHTML = fullText;
+                                    // Summary → chat bubble
+                                    summaryText = parsed.summary || reasoningText.slice(-500);
+                                    bubble.innerHTML = escapeHtml(summaryText).replace(/\n/g, '<br>');
+                                } else if (parsed.type === 'cancelled') {
+                                    bubble.innerHTML = '<span style="color: var(--error);">🚫 ' + escapeHtml(parsed.message || 'Agent cancelled.') + '</span>';
                                 } else if (parsed.type === 'error') {
                                     bubble.innerHTML = '⚠ ' + parsed.error;
                                 }
@@ -895,7 +1112,15 @@
                         }
                     }
                 }
-                chatHistory.push({role: 'assistant', content: fullText.replace(/<[^>]*>/g, '').slice(0, 500)});
+                // Hide cancel button when done
+                if (cancelBtn) cancelBtn.style.display = 'none';
+                // If no summary was set, use reasoning text
+                if (!summaryText && reasoningText) {
+                    bubble.innerHTML = escapeHtml(reasoningText.slice(-500)).replace(/\n/g, '<br>');
+                    summaryText = reasoningText.slice(-500);
+                }
+                if (!summaryText) summaryText = '(Agent selesai. Lihat detail di panel Agent Activity.)';
+                chatHistory.push({role: 'assistant', content: summaryText.replace(/<[^>]*>/g, '').slice(0, 500)});
                 saveChatHistory();
             } else {
                 // Reasoning mode: streaming text
@@ -995,7 +1220,7 @@
         const panel = document.getElementById('execPanel');
         const btn = document.getElementById('execPanelBtn');
         panel.classList.toggle('open');
-        btn.classList.toggle('active');
+        if (btn) btn.classList.toggle('active');
     }
 
     function addExecItem(data) {
@@ -1023,18 +1248,53 @@
         body.prepend(item);
         body.scrollTop = 0;
 
-        // Show badge
         execCount++;
-        const badge = document.getElementById('execBadge');
-        badge.textContent = execCount;
-        const btn = document.getElementById('execPanelBtn');
-        btn.style.display = 'flex';
 
-        // Auto-open panel on first execution
-        if (execCount === 1) {
-            document.getElementById('execPanel').classList.add('open');
-            btn.classList.add('active');
+        // Show cancel button while running
+        const cancelBtn = document.getElementById('cancelAgentBtn');
+        if (cancelBtn && status === 'running') cancelBtn.style.display = 'flex';
+        if (cancelBtn && status !== 'running') cancelBtn.style.display = 'none';
+    }
+
+    async function cancelAgent() {
+        const confirmed = await showConfirm('Cancel agent execution? Running commands will be killed.', {icon: 'warning', title: 'Cancel Agent', confirmText: 'Cancel Agent', danger: true});
+        if (!confirmed) return;
+        try {
+            await fetch('/trazezzo/api/chat/cancel', {method: 'POST'});
+            const cancelBtn = document.getElementById('cancelAgentBtn');
+            if (cancelBtn) cancelBtn.style.display = 'none';
+            addMessage('🚫 Agent cancelled by user.', 'bot');
+        } catch(e) {
+            console.error('Cancel error:', e);
         }
+    }
+
+    // ── Agent reasoning streaming into exec panel ───────────────
+    let reasoningItem = null;
+    function addExecReasoningChunk(chunk) {
+        const body = document.getElementById('execPanelBody');
+        // Remove placeholder
+        if (body.querySelector('div[style*="text-align: center"]')) {
+            body.innerHTML = '';
+        }
+        // Create or append to reasoning item
+        if (!reasoningItem || reasoningItem.dataset.type !== 'reasoning') {
+            reasoningItem = document.createElement('div');
+            reasoningItem.className = 'exec-item running';
+            reasoningItem.dataset.type = 'reasoning';
+            reasoningItem.innerHTML = `
+                <div class="cmd-header">
+                    <span class="status-icon">○</span>
+                    <span style="color: #93c5fd;">💭 Reasoning</span>
+                    <span class="source">agent</span>
+                </div>
+                <div class="cmd-output reasoning-output" style="white-space: pre-wrap; line-height: 1.5;"></div>
+            `;
+            body.prepend(reasoningItem);
+        }
+        const output = reasoningItem.querySelector('.reasoning-output');
+        output.textContent += chunk;
+        body.scrollTop = 0;
     }
 
     function connectExecStream() {
@@ -1094,8 +1354,9 @@
         }
     }
 
-    function executeRecAction(actionType, args) {
-        if (!confirm(`Execute: ${actionType}?\n${JSON.stringify(args, null, 2)}`)) return;
+    async function executeRecAction(actionType, args) {
+        const confirmed = await showConfirm(`Execute: ${actionType}?\n${JSON.stringify(args, null, 2)}`, {icon: 'info', title: 'Execute Recommendation', confirmText: 'Execute'});
+        if (!confirmed) return;
         fetch('/trazezzo/api/recommendations/execute', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -1103,7 +1364,7 @@
         })
         .then(r => r.json())
         .then(data => {
-            alert(data.success ? '✓ Executed: ' + (data.output || 'OK') : '⚠ ' + (data.error || 'Failed'));
+            alert(data.success ? '✓ Executed: ' + (data.output || 'OK') : '⚠ ' + (data.error || 'Failed'), data.success ? 'success' : 'error');
             loadRecommendations();
         });
     }
@@ -1120,6 +1381,104 @@
     // Auto-load recommendations on page load + poll every 30s
     setTimeout(() => { loadRecommendations(); document.getElementById('recList').style.display = 'block'; }, 1000);
     setInterval(loadRecommendations, 30000);
+
+    // ── SPA navigation: intercept nav-item clicks, swap .main content ───
+    // Pages that need full reload (heavy JS/terminal):
+    const SPA_SKIP = ['/trazezzo/ssh', '/trazezzo/terminal', '/trazezzo/editor'];
+
+    let spaAbortController = null;
+
+    async function spaNavigate(url, navItem) {
+        // Abort any in-flight navigation
+        if (spaAbortController) spaAbortController.abort();
+        spaAbortController = new AbortController();
+
+        // Update active nav item
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        if (navItem) navItem.classList.add('active');
+
+        // Update URL without full reload
+        history.pushState({url}, '', url);
+
+        // Update topbar breadcrumb
+        const pageName = navItem ? navItem.textContent.trim() : '';
+        const tb = document.getElementById('topbarPage');
+        if (tb && pageName) tb.textContent = pageName;
+
+        // Fetch new page content
+        const main = document.querySelector('.main');
+        main.style.opacity = '0.4';
+        main.style.pointerEvents = 'none';
+
+        try {
+            const resp = await fetch(url, {
+                signal: spaAbortController.signal,
+                credentials: 'same-origin',
+            });
+            const html = await resp.text();
+            // Parse response HTML, extract .main content
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newMain = doc.querySelector('.main');
+
+            if (newMain) {
+                // Collect scripts before setting innerHTML (scripts set via innerHTML don't execute)
+                const scripts = [...newMain.querySelectorAll('script')].map(s => ({
+                    src: s.src, text: s.textContent
+                }));
+                // Also collect scripts from the page's script block (outside .main, in a script tag)
+                // The script block is usually at the end of body
+                const bodyScripts = [...doc.querySelectorAll('body > script:not([src])')].map(s => ({
+                    src: s.src, text: s.textContent
+                })).filter(s => s.text && s.text.length > 50); // skip trivial scripts
+
+                main.innerHTML = newMain.innerHTML;
+                // Re-inject scripts so they execute
+                for (const s of scripts) {
+                    const newScript = document.createElement('script');
+                    if (s.src) newScript.src = s.src;
+                    else newScript.textContent = s.text;
+                    main.appendChild(newScript);
+                }
+                // Also run page-specific scripts from body
+                for (const s of bodyScripts) {
+                    // Skip if it looks like the global script (has 'trazezzo' global functions)
+                    if (s.text.includes('function sendChat') || s.text.includes('const CHAT_STORAGE_KEY')) continue;
+                    const newScript = document.createElement('script');
+                    newScript.textContent = s.text;
+                    document.body.appendChild(newScript);
+                }
+            }
+
+            main.style.opacity = '1';
+            main.style.pointerEvents = 'auto';
+            main.scrollTop = 0;
+        } catch(e) {
+            if (e.name === 'AbortError') return;
+            // Fallback: full page load
+            window.location.href = url;
+        }
+    }
+
+    // Intercept nav-item clicks for SPA
+    document.addEventListener('click', (e) => {
+        const item = e.target.closest('.nav-item');
+        if (!item) return;
+        const href = item.getAttribute('href');
+        if (!href || href === '#') return;
+        // Skip heavy pages
+        if (SPA_SKIP.some(skip => href.startsWith(skip))) return;
+        e.preventDefault();
+        spaNavigate(href, item);
+    });
+
+    // Handle browser back/forward
+    window.addEventListener('popstate', (e) => {
+        const url = e.state?.url || location.pathname;
+        // Find matching nav item
+        const navItem = document.querySelector(`.nav-item[href="${url}"]`);
+        spaNavigate(url, navItem);
+    });
     </script>
 </body>
 </html>

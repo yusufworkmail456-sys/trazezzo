@@ -37,6 +37,7 @@ async def chat_completion(
     messages: list[dict],
     temperature: float = 0.7,
     max_tokens: int = 2000,
+    model: str | None = None,
 ) -> str:
     """Non-streaming chat completion via 9router."""
     api_key = _get_api_key()
@@ -48,7 +49,7 @@ async def chat_completion(
                 "Content-Type": "application/json",
             },
             json={
-                "model": LLM_MODEL,
+                "model": model or LLM_MODEL,
                 "messages": messages,
                 "temperature": temperature,
                 "max_tokens": max_tokens,
@@ -71,6 +72,7 @@ async def chat_completion_stream(
     messages: list[dict],
     temperature: float = 0.7,
     max_tokens: int = 2000,
+    model: str | None = None,
 ) -> AsyncGenerator[str, None]:
     """Streaming chat completion. Yields text chunks."""
     api_key = _get_api_key()
@@ -83,7 +85,7 @@ async def chat_completion_stream(
                 "Content-Type": "application/json",
             },
             json={
-                "model": LLM_MODEL,
+                "model": model or LLM_MODEL,
                 "messages": messages,
                 "temperature": temperature,
                 "max_tokens": max_tokens,
