@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Trazezzo -- Security{% endblock %}
+{% block title %}Trazezzo — Security{% endblock %}
 {% block content %}
 <div class="page-header">
  <h2>Security</h2>
- <div class="desc">SELinux — SSH keys — SSL certs — Credential scan</div>
+ <div class="desc">SELinux — SSH keys — sshd config</div>
 </div>
 
 <div class="grid grid-2">
@@ -66,72 +66,5 @@
  <tr><td>{{ k }}</td><td>{{ v }}</td></tr>
  {% endfor %}
  </table>
-</div>
-
-<div class="card">
- <div class="card-title">SSL Certificates ({{ certs|length }})</div>
- {% if certs %}
- <div style="overflow-x: auto;">
- <table style="width: 100%; font-size: 0.82rem;">
-  <thead><tr>
-   <th style="text-align: left; padding: 6px 8px;">CN / Domain</th>
-   <th style="text-align: left; padding: 6px 8px;">Issuer</th>
-   <th style="text-align: left; padding: 6px 8px;">Expiry</th>
-   <th style="text-align: right; padding: 6px 8px;">Days</th>
-   <th style="text-align: left; padding: 6px 8px;">Status</th>
-  </tr></thead>
-  <tbody>
-  {% for cert in certs %}
-  <tr style="border-bottom: 1px solid var(--border);">
-   <td style="padding: 4px 8px;"><strong>{{ cert.cn or cert.subject[:40] }}</strong></td>
-   <td style="padding: 4px 8px; font-size: 0.78rem;">{{ cert.issuer[:30] }}</td>
-   <td style="padding: 4px 8px; font-family: var(--font-mono); font-size: 0.78rem;">{{ cert.not_after }}</td>
-   <td style="padding: 4px 8px; text-align: right; font-weight: 600; color: {% if cert.expired %}var(--error){% elif cert.expiring_soon %}var(--warning){% else %}var(--success){% endif %};">{{ cert.days_left }}</td>
-   <td style="padding: 4px 8px;">
-    {% if cert.expired %}<span class="badge failed">EXPIRED</span>
-    {% elif cert.expiring_soon %}<span class="badge" style="background: var(--warning); color: #1e1e1e;">SOON</span>
-    {% else %}<span class="badge active">VALID</span>{% endif %}
-   </td>
-  </tr>
-  {% endfor %}
-  </tbody>
- </table>
- </div>
- {% else %}
- <div style="color: var(--text-muted); padding: 12px;">No certificates found in common directories</div>
- {% endif %}
-</div>
-
-<div class="card">
- <div class="card-title">Credential Scanner ({{ credentials.credentials_found }} found — {{ credentials.files_scanned }} files scanned)</div>
- {% if credentials.credentials_found > 0 %}
- <div style="overflow-x: auto;">
- <table style="width: 100%; font-size: 0.82rem; table-layout: fixed;">
-  <thead><tr>
-   <th style="text-align: left; padding: 6px 8px; width: 120px;">File</th>
-   <th style="text-align: right; padding: 6px 8px; width: 40px;">Line</th>
-   <th style="text-align: left; padding: 6px 8px; width: 80px;">Type</th>
-   <th style="text-align: left; padding: 6px 8px; width: 120px;">Masked Value</th>
-   <th style="text-align: left; padding: 6px 8px;">Context</th>
-  </tr></thead>
-  <tbody>
-  {% for c in credentials.findings %}
-  <tr>
-   <td style="font-family: monospace; font-size: 0.75rem; padding: 4px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ c.file }}">{{ c.file.split('/')[-1] }}</td>
-   <td style="padding: 4px 8px; text-align: right;">{{ c.line }}</td>
-   <td style="padding: 4px 8px;"><span class="badge warn">{{ c.type }}</span></td>
-   <td style="font-family: monospace; font-size: 0.75rem; padding: 4px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ c.masked_value }}</td>
-   <td style="font-family: monospace; font-size: 0.72rem; color: var(--text-muted); padding: 4px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ c.context }}">{{ c.context }}</td>
-  </tr>
-  {% endfor %}
-  </tbody>
- </table>
- </div>
- <div style="margin-top: 8px; font-size: 0.75rem; color: var(--text-muted);">
-  Values are masked. Secret values are never exposed in the UI.
- </div>
- {% else %}
- <div style="color: var(--success); padding: 12px;">No plaintext credentials detected in scanned paths.</div>
- {% endif %}
 </div>
 {% endblock %}
