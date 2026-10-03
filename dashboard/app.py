@@ -265,10 +265,11 @@ async def updates_page(request: Request):
 
 @app.get("/security", response_class=HTMLResponse)
 async def security_page(request: Request):
-    """Security page (SELinux, SSH keys, credentials)."""
+    """Security page (SELinux, SSH keys, SSL certs, credentials)."""
     from trazezzo.modules.selinux import get_selinux_status
     from trazezzo.modules.ssh_keys import get_authorized_keys, get_host_keys, get_sshd_config_summary
     from trazezzo.modules.credentials import scan_credentials
+    from trazezzo.modules.ssl_certs import get_certs
 
     return templates.TemplateResponse(request, "security.html", {
         "request": request,
@@ -278,6 +279,7 @@ async def security_page(request: Request):
         "host_keys": get_host_keys(),
         "sshd_config": get_sshd_config_summary(),
         "credentials": scan_credentials(),
+        "certs": get_certs(),
     })
 
 
