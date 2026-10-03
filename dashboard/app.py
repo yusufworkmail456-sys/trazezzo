@@ -28,6 +28,7 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 # ── App ────────────────────────────────────────────────────────────────
 app = FastAPI(title="Trazezzo", version="0.1.0")
 templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
+templates.env.auto_reload = True
 
 # ── Session middleware ──────────────────────────────────────────────
 from starlette.middleware.sessions import SessionMiddleware
