@@ -468,3 +468,77 @@ def get_linked_repos() -> list[dict]:
         return linked
     except Exception:
         return []
+
+
+# ── Manual repo management ──────────────────────────────────────────
+
+REPOS_FILE = DATA_DIR / "tracked_repos.json"
+
+
+def add_tracked_repo(owner: str, repo: str) -> dict:
+    """Add a repo to the manually tracked list."""
+    try:
+        repos = _get_tracked_repos()
+        key = f"{owner}/{repo}"
+        if any(r.get("full_name") == key for r in repos):
+            return {"error": "Repo already tracked"}
+        repos.append({"owner": owner, "repo": repo, "full_name": key})
+        _save_tracked_repos(repos)
+        
+        # Try to get repo info for display
+        info = get_repo_info(owner, repo)
+        return {"success": True, "repo": {"owner": owner, "repo": repo, "full_name": key, "info": info if not info.get("error") else {}}}
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+def remove_tracked_repo(owner: str, repo: str) -> dict:
+    """Remove a repo from tracked list."""
+    try:
+        repos = _get_tracked_repos()
+        key = f"{owner}/{repo}"
+        repos = [r for r in repos if r.get("full_name") != key]
+        _save_tracked_repos(repos)
+        return {"success": True}
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+def list_tracked_repos() -> dict:
+    """List all manually tracked repos with their info."""
+    try:
+        repos = _get_tracked_repos()
+        result = []
+        for r in repos:
+            entry = {
+                "owner": r["owner"],
+                "repo": r["repo"],
+                "full_name": r["full_name"],
+                "info": {},
+            }
+            # Try to get repo info if token is available
+            if has_token():
+                info = get_repo_info(r["owner"], r["repo"])
+                if not info.get("error"):
+                    entry["info"] = info
+            result.append(entry)
+        return {"repos": result, "count": len(result)}
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+def _get_tracked_repos() -> list[dict]:
+    """Read tracked repos from file."""
+    try:
+        if REPOS_FILE.exists():
+            return json.loads(REPOS_FILE.read_text())
+    except Exception:
+        pass
+    return []
+
+
+def _save_tracked_repos(repos: list[dict]) -> None:
+    """Save tracked repos to file."""
+    REPOS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    REPOS_FILE.write_text(json.dumps(repos, indent=2))
+    os.chmod(REPOS_FILE, 0o600)

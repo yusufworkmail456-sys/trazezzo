@@ -417,6 +417,7 @@ async def api_chat(request: Request):
     user_message = body.get("message", "")
     mode = body.get("mode", "reasoning")  # reasoning | agent
     image_data = body.get("image", None)  # base64 image (data URI)
+    scope = body.get("scope", "system")  # system | repo:owner/repo
 
     from trazezzo.modules.system import get_system_overview
     from trazezzo.llm import chat_completion, chat_completion_stream
@@ -441,6 +442,22 @@ async def api_chat(request: Request):
         for ev in recent_events:
             context_parts.append(f"  [{ev.ts.strftime('%H:%M:%S')}] [{ev.actor.kind.value}] {ev.type.value}: {ev.message[:80]}")
 
+    # ── Repo scope: add repo context if scope is repo:owner/repo ──────
+    repo_context = ""
+    if scope.startswith("repo:"):
+        repo_full = scope[5:]  # owner/repo
+        parts = repo_full.split("/")
+        if len(parts) == 2:
+            owner, repo_name = parts
+            from trazezzo.modules.github import read_repo_tree, has_token
+            if has_token():
+                tree = read_repo_tree(owner, repo_name)
+                if tree.get("success") and tree.get("files"):
+                    repo_context = f"\n\nRepo: {repo_full} (branch: {tree.get('branch', 'main')})\nFiles:\n" + "\n".join(tree["files"][:50])
+                    context_parts.append(repo_context)
+            else:
+                context_parts.append(f"\nRepo: {repo_full} — GitHub token not configured. Cannot read repo files.")
+
     # ── Agent mode: full operation ────────────────────────────────────
     if mode == "agent":
         from trazezzo.agent.chat_agent import run_agent
@@ -449,7 +466,7 @@ async def api_chat(request: Request):
 
         async def agent_stream():
             try:
-                async for event_json in run_agent(user_message, context_parts, chat_history, image_data):
+                async for event_json in run_agent(user_message, context_parts, chat_history, image_data, scope=scope):
                     yield f"data: {event_json}\n\n"
             except Exception as exc:
                 yield f"data: {json.dumps({'type': 'error', 'error': str(exc)})}\n\n"
@@ -1549,6 +1566,23 @@ async def api_github_read_tree(owner: str, repo: str, branch: str = ""):
 async def api_github_linked_repos():
     from trazezzo.modules.github import get_linked_repos
     return {"repos": get_linked_repos()}
+
+@app.get("/api/github/tracked")
+async def api_github_tracked():
+    from trazezzo.modules.github import list_tracked_repos
+    return list_tracked_repos()
+
+@app.post("/api/github/tracked/add")
+async def api_github_add_tracked(request: Request):
+    from trazezzo.modules.github import add_tracked_repo
+    body = await request.json()
+    return add_tracked_repo(body.get("owner", ""), body.get("repo", ""))
+
+@app.post("/api/github/tracked/remove")
+async def api_github_remove_tracked(request: Request):
+    from trazezzo.modules.github import remove_tracked_repo
+    body = await request.json()
+    return remove_tracked_repo(body.get("owner", ""), body.get("repo", ""))
 
 
 # ── Run ───────────────────────────────────────────────────────────────

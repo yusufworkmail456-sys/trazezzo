@@ -121,6 +121,17 @@
  <div id="domainInventory" style="color: var(--text-muted); font-size: 0.82rem;">Click "Refresh" to auto-detect domains and apps.</div>
 </div>
 
+{# ── Tracked Repos (Manual) ─────────────────────────────────── #}
+<div class="gh-card">
+ <div class="gh-card-title">Tracked Repositories</div>
+ <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+  <input type="text" id="repoOwnerInput" placeholder="owner (e.g. yusufworkmail456-sys)" style="flex: 1; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; font-family: monospace; font-size: 0.82rem;">
+  <input type="text" id="repoNameInput" placeholder="repo name" style="flex: 1; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; font-family: monospace; font-size: 0.82rem;">
+  <button class="btn btn-sm btn-primary" onclick="addTrackedRepo()">Add</button>
+ </div>
+ <div id="trackedReposList">Loading...</div>
+</div>
+
 {% endblock %}
 
 {% block script %}
@@ -276,6 +287,73 @@ async function createPRFromPush() {
 {% if has_token %}
 setTimeout(loadRepos, 500);
 {% endif %}
+// Always load tracked repos (they work without token)
+setTimeout(loadTrackedRepos, 500);
+
+// ── Tracked Repos ─────────────────────────────────────────────
+async function loadTrackedRepos() {
+ const container = document.getElementById('trackedReposList');
+ if (!container) return;
+ try {
+  const resp = await fetch('/trazezzo/api/github/tracked');
+  const data = await resp.json();
+  if (data.error || !data.repos) {
+   container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.82rem;">No tracked repos. Add one above.</div>';
+   return;
+  }
+  if (data.count === 0) {
+   container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.82rem;">No tracked repos. Add one above.</div>';
+   return;
+  }
+  let html = '<table style="width: 100%; font-size: 0.82rem;"><thead><tr><th>Repo</th><th>Branch</th><th>Lang</th><th></th></tr></thead><tbody>';
+  for (const r of data.repos) {
+   const info = r.info || {};
+   const fullName = r.full_name || `${r.owner}/${r.repo}`;
+   const url = info.html_url || '#';
+   html += `<tr style="border-bottom: 1px solid var(--border);">
+    <td style="padding: 4px 8px;"><a href="${url}" target="_blank"><strong>${fullName}</strong></a> ${info.private ? '<span class="private">private</span>' : ''}</td>
+    <td style="padding: 4px 8px;">${info.default_branch || '-'}</td>
+    <td style="padding: 4px 8px;">${info.language || '-'}</td>
+    <td style="padding: 4px 8px;"><button class="btn btn-sm" style="color: var(--error);" onclick="removeTrackedRepo('${r.owner}', '${r.repo}')">Remove</button></td>
+   </tr>`;
+  }
+  html += '</tbody></table>';
+  container.innerHTML = html;
+ } catch(e) {
+  container.innerHTML = '<div style="color: var(--text-muted);">No tracked repos.</div>';
+ }
+}
+
+async function addTrackedRepo() {
+ const owner = document.getElementById('repoOwnerInput').value.trim();
+ const repo = document.getElementById('repoNameInput').value.trim();
+ if (!owner || !repo) { alert('Both owner and repo are required'); return; }
+ const resp = await fetch('/trazezzo/api/github/tracked/add', {
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({owner, repo}),
+ });
+ const data = await resp.json();
+ if (data.success) {
+  document.getElementById('repoOwnerInput').value = '';
+  document.getElementById('repoNameInput').value = '';
+  loadTrackedRepos();
+ } else {
+  alert('Error: ' + (data.error || 'Failed'));
+ }
+}
+
+async function removeTrackedRepo(owner, repo) {
+ if (!confirm(`Remove ${owner}/${repo} from tracked repos?`)) return;
+ const resp = await fetch('/trazezzo/api/github/tracked/remove', {
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({owner, repo}),
+ });
+ const data = await resp.json();
+ if (data.success) { loadTrackedRepos(); }
+ else { alert('Error: ' + (data.error || 'Failed')); }
+}
 
 async function loadDomains() {
  const container = document.getElementById('domainInventory');

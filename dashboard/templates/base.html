@@ -668,6 +668,9 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 </button>
                 <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFileSelect(event)">
+                <select id="chatScope" style="padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.78rem; background: var(--bg); color: var(--text); cursor: pointer; max-width: 120px;" title="Chat scope">
+                    <option value="system">🖥️ System</option>
+                </select>
                 <input type="text" id="chatInput" placeholder="Tanya servermu... (Ctrl+V untuk paste gambar)" onkeypress="if(event.key==='Enter') sendChat()">
             </div>
         </div>
@@ -803,6 +806,24 @@
             const resp = await fetch('/trazezzo/api/proactive/status');
             const data = await resp.json();
             updateModeUI(data.mode);
+        } catch(e) {}
+    })();
+
+    // ── Load tracked repos into chat scope selector ──────────────
+    (async function loadChatScopes() {
+        try {
+            const resp = await fetch('/trazezzo/api/github/tracked');
+            const data = await resp.json();
+            const select = document.getElementById('chatScope');
+            if (!select) return;
+            if (data.repos && data.count > 0) {
+                for (const r of data.repos) {
+                    const opt = document.createElement('option');
+                    opt.value = `repo:${r.owner}/${r.repo}`;
+                    opt.textContent = `📦 ${r.repo}`;
+                    select.appendChild(opt);
+                }
+            }
         } catch(e) {}
     })();
 
@@ -1058,10 +1079,11 @@
                     execPanel.classList.add('open');
                 }
 
+                const chatScope = document.getElementById('chatScope')?.value || 'system';
                 const resp = await fetch('/trazezzo/api/chat', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({message: msg, mode: 'agent', image: imageData, history: chatHistory.slice(-10)}),
+                    body: JSON.stringify({message: msg, mode: 'agent', image: imageData, history: chatHistory.slice(-10), scope: chatScope}),
                 });
                 const reader = resp.body.getReader();
                 const decoder = new TextDecoder();
@@ -1127,10 +1149,11 @@
                 saveChatHistory();
             } else {
                 // Reasoning mode: streaming text
+                const chatScope = document.getElementById('chatScope')?.value || 'system';
                 const resp = await fetch('/trazezzo/api/chat', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({message: msg, mode: 'reasoning', image: imageData}),
+                    body: JSON.stringify({message: msg, mode: 'reasoning', image: imageData, scope: chatScope}),
                 });
                 const reader = resp.body.getReader();
                 const decoder = new TextDecoder();

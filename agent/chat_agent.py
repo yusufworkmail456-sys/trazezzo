@@ -340,20 +340,29 @@ async def run_agent(
     context_parts: list[str],
     chat_history: list[dict] | None = None,
     image_data: str | None = None,
+    scope: str = "system",
 ) -> AsyncGenerator[str, None]:
     """Run agent loop: LLM proposes actions → execute → feed back → repeat.
 
     Yields JSON event strings: {"type": "text", "chunk": "..."} or
     {"type": "action", "action": {...}} or {"type": "result", "result": {...}}
     or {"type": "done", "summary": "..."}
+
+    scope: "system" for system-wide queries, "repo:owner/repo" for repo-scoped.
     """
     from typing import AsyncGenerator
 
     context_str = "\n".join(context_parts)
 
+    # Build system prompt — include repo context if scope is repo
+    system_prompt = AGENT_SYSTEM_PROMPT
+    if scope.startswith("repo:"):
+        repo_full = scope[5:]
+        system_prompt += f"\n\n## Active Repo Scope\nUser is asking about repo: {repo_full}\nUse read_repo_file and read_repo_tree tools with owner/repo from this scope to read code.\nIf you find a bug in the repo, use push_repo_file to fix it (with user approval).\nCross-reference system logs with repo code to find root causes."
+
     # Build initial messages
     messages: list[dict] = [
-        {"role": "system", "content": AGENT_SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt},
     ]
 
     # Add chat history
