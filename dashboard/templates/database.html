@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo — Database{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>Database Management</h2>
+ <div class="desc">Auto-detected database servers</div>
+</div>
+
+{% if servers %}
+ {% for s in servers %}
+ <div class="card" style="margin-bottom: 16px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+   <div class="card-title" style="margin: 0;">
+    {{ s.type | upper }}
+    {% if s.running %}<span class="badge active">Running</span>{% else %}<span class="badge inactive">Stopped</span>{% endif %}
+   </div>
+   {% if s.running %}
+   <button class="btn btn-sm btn-primary" onclick="loadDbInfo('{{ s.type }}')">View Details</button>
+   {% endif %}
+  </div>
+  <div style="font-size: 0.82rem; color: var(--text-muted);">{{ s.version }}</div>
+  <div id="db-info-{{ s.type }}" style="margin-top: 12px;"></div>
+ </div>
+ {% endfor %}
+{% else %}
+<div class="card">
+ <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+  No database servers detected on this system.<br>
+  <span style="font-size: 0.82rem;">Install PostgreSQL, MySQL/MariaDB, Redis, or MongoDB to enable database management.</span>
+ </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block script %}
+<script>
+function loadDbInfo(dbType) {
+ const container = document.getElementById('db-info-' + dbType);
+ container.innerHTML = '<div style="color: var(--text-muted);">Loading...</div>';
+ fetch(`/trazezzo/api/database/info/${dbType}`)
+ .then(r => r.json())
+ .then(data => {
+  if (data.error) {
+   container.innerHTML = `<div style="color: var(--error);">${data.error}</div>`;
+   return;
+  }
+  let html = '';
+  for (const [label, rows] of Object.entries(data.sections || {})) {
+   html += `<div style="margin-top: 12px;"><div class="card-title" style="font-size: 0.85rem;">${label.replace(/_/g, ' ').toUpperCase()}</div>`;
+   html += '<pre style="font-size: 0.78rem; white-space: pre-wrap; max-height: 300px; overflow-y: auto; background: var(--surface-hover); padding: 10px; border-radius: 6px;">';
+   html += rows.join('\n');
+   html += '</pre></div>';
+  }
+  container.innerHTML = html || '<div style="color: var(--text-muted);">No data available</div>';
+ });
+}
+</script>
+{% endblock %}

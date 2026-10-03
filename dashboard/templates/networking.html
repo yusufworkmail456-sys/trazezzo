@@ -26,13 +26,141 @@
 
 <div class="grid grid-2">
  <div class="card">
- <div class="card-title">Routing Table</div>
- <pre style="font-size: 0.8rem; white-space: pre-wrap;">{% for route in routes %}{{ route }}
+  <div class="card-title">Routing Table</div>
+  <pre style="font-size: 0.8rem; white-space: pre-wrap;">{% for route in routes %}{{ route }}
 {% endfor %}</pre>
  </div>
  <div class="card">
- <div class="card-title">Firewall ({{ firewall.type }})</div>
- <pre style="font-size: 0.8rem; white-space: pre-wrap;">{{ firewall.status }}</pre>
+  <div class="card-title">Firewall ({{ firewall.type }})</div>
+  <pre style="font-size: 0.8rem; white-space: pre-wrap; max-height: 300px; overflow-y: auto;">{{ firewall.status }}</pre>
  </div>
 </div>
+
+<!-- Firewall Editor -->
+<div class="card">
+ <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+  <div class="card-title" style="margin: 0;">Firewall Rules Editor</div>
+  <button class="btn btn-sm btn-primary" onclick="loadFirewallRules()">Refresh Rules</button>
+ </div>
+ <div id="firewallRules" style="margin-bottom: 16px;">
+  <div style="color: var(--text-muted);">Click "Refresh Rules" to load.</div>
+ </div>
+ <div style="border-top: 1px solid var(--border); padding-top: 12px;">
+  <div class="card-title" style="font-size: 0.85rem; margin-bottom: 8px;">Add Rule</div>
+  <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+   <select id="fwAction" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.82rem;">
+    <option value="allow">Allow</option>
+    <option value="deny">Deny</option>
+    <option value="reject">Reject</option>
+   </select>
+   <input type="text" id="fwPort" placeholder="Port (e.g. 8080)" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-mono); font-size: 0.82rem; width: 120px;">
+   <select id="fwProto" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.82rem;">
+    <option value="tcp">TCP</option>
+    <option value="udp">UDP</option>
+    <option value="both">Both</option>
+   </select>
+   <input type="text" id="fwSource" placeholder="Source IP (optional, e.g. 10.0.0.0/24)" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-mono); font-size: 0.82rem; flex: 1; min-width: 200px;">
+   <button class="btn btn-sm btn-primary" onclick="addFirewallRule()">Add Rule</button>
+  </div>
+ </div>
+</div>
+
+<!-- VPN / Tunnels -->
+<div class="card">
+ <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+  <div class="card-title" style="margin: 0;">VPN / Tunnels</div>
+  <button class="btn btn-sm" onclick="loadVpnTunnels()">Refresh</button>
+ </div>
+ <div id="vpnTunnels">
+  <div style="color: var(--text-muted);">Click "Refresh" to detect tunnels.</div>
+ </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+function loadFirewallRules() {
+ fetch('/trazezzo/api/firewall/rules')
+ .then(r => r.json())
+ .then(data => {
+  const container = document.getElementById('firewallRules');
+  if (!data.rules || data.rules.length === 0) {
+   container.innerHTML = '<div style="color: var(--text-muted);">No firewall rules found (firewall may be inactive or not installed).</div>';
+   return;
+  }
+  let html = '<table style="width: 100%; font-size: 0.82rem;"><thead><tr><th>#</th><th>Action</th><th>Port</th><th>Proto</th><th>Source</th><th></th></tr></thead><tbody>';
+  data.rules.forEach(r => {
+   const actionColor = r.action === 'allow' ? 'var(--success)' : 'var(--error)';
+   html += `<tr style="border-bottom: 1px solid var(--border);">
+    <td style="padding: 4px 8px; font-family: var(--font-mono);">${r.num}</td>
+    <td style="padding: 4px 8px; color: ${actionColor}; font-weight: 600;">${r.action}</td>
+    <td style="padding: 4px 8px; font-family: var(--font-mono);">${r.port || '-'}</td>
+    <td style="padding: 4px 8px; font-family: var(--font-mono);">${r.proto || '-'}</td>
+    <td style="padding: 4px 8px; font-family: var(--font-mono);">${r.source || '-'}</td>
+    <td style="padding: 4px 8px;"><button class="btn btn-sm" style="color: var(--error);" onclick="deleteFirewallRule('${r.num}')">Delete</button></td>
+   </tr>`;
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+ });
+}
+
+async function addFirewallRule() {
+ const action = document.getElementById('fwAction').value;
+ const port = document.getElementById('fwPort').value.trim();
+ const proto = document.getElementById('fwProto').value;
+ const source = document.getElementById('fwSource').value.trim();
+ if (!port) { alert('Port is required', 'warning'); return; }
+ const confirmed = await showConfirm(`Add rule: ${action} port ${port}/${proto}${source ? ' from ' + source : ''}?`, {icon: 'warning', title: 'Firewall Rule', confirmText: 'Add'});
+ if (!confirmed) return;
+ fetch('/trazezzo/api/firewall/add', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ action, port, proto, source })
+ })
+ .then(r => r.json())
+ .then(data => {
+  if (data.success) { alert('Rule added', 'success'); loadFirewallRules(); }
+  else { alert(`Failed: ${data.error}`, 'error'); }
+ });
+}
+
+async function deleteFirewallRule(ruleNum) {
+ const confirmed = await showConfirm(`Delete firewall rule #${ruleNum}?`, {icon: 'warning', title: 'Delete Rule', confirmText: 'Delete', danger: true});
+ if (!confirmed) return;
+ fetch('/trazezzo/api/firewall/delete', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ rule_num: ruleNum })
+ })
+ .then(r => r.json())
+ .then(data => {
+  if (data.success) { alert('Rule deleted', 'success'); loadFirewallRules(); }
+  else { alert(`Failed: ${data.error}`, 'error'); }
+ });
+}
+
+function loadVpnTunnels() {
+ fetch('/trazezzo/api/vpn/tunnels')
+ .then(r => r.json())
+ .then(data => {
+  const container = document.getElementById('vpnTunnels');
+  if (!data.tunnels || data.tunnels.length === 0) {
+   container.innerHTML = '<div style="color: var(--text-muted);">No VPN tunnels detected. Install WireGuard or OpenVPN to enable tunnel management.</div>';
+   return;
+  }
+  let html = '<table style="width: 100%; font-size: 0.82rem;"><thead><tr><th>Type</th><th>Interface</th><th>Status</th><th>Endpoint</th></tr></thead><tbody>';
+  data.tunnels.forEach(t => {
+   html += `<tr style="border-bottom: 1px solid var(--border);">
+    <td style="padding: 4px 8px;"><span class="badge ${t.status === 'active' || t.status === 'running' ? 'active' : 'inactive'}">${t.type}</span></td>
+    <td style="padding: 4px 8px; font-family: var(--font-mono);">${t.interface}</td>
+    <td style="padding: 4px 8px;">${t.status || '-'}</td>
+    <td style="padding: 4px 8px; font-family: var(--font-mono); font-size: 0.78rem;">${t.endpoint || '-'}</td>
+   </tr>`;
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+ });
+}
+</script>
 {% endblock %}

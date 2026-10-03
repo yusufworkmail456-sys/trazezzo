@@ -28,6 +28,25 @@
  <div style="color: var(--success); padding: 20px; text-align: center;">System is up to date</div>
  {% endif %}
 </div>
+
+<!-- Package Manager -->
+<div class="card">
+ <div class="card-title">Package Manager ({{ updates.package_manager }})</div>
+ <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items: center;">
+  <input type="text" id="pkgSearch" placeholder="Search packages (e.g. htop, nginx)" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; flex: 1; font-family: var(--font-mono); font-size: 0.85rem;" onkeypress="if(event.key==='Enter') searchPackages()">
+  <button class="btn btn-sm btn-primary" onclick="searchPackages()">Search</button>
+ </div>
+ <div id="searchResults" style="margin-bottom: 16px;"></div>
+ <div style="border-top: 1px solid var(--border); padding-top: 12px;">
+  <div class="card-title" style="font-size: 0.85rem; margin-bottom: 8px;">Install / Remove by name</div>
+  <div style="display: flex; gap: 8px; align-items: center;">
+   <input type="text" id="pkgName" placeholder="package name(s), space separated" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; flex: 1; font-family: var(--font-mono); font-size: 0.85rem;">
+   <button class="btn btn-sm btn-primary" onclick="installPackage()">Install</button>
+   <button class="btn btn-sm" style="color: var(--error);" onclick="removePackage(false)">Remove</button>
+   <button class="btn btn-sm" style="color: var(--error);" onclick="removePackage(true)">Purge</button>
+  </div>
+ </div>
+</div>
 {% else %}
 <div class="card">
  <div style="text-align: center; padding: 40px; color: var(--text-muted);">
@@ -51,6 +70,75 @@ function applyUpdates() {
  alert('Update process completed with errors. Check dashboard logs.');
  }
  location.reload();
+ });
+}
+
+function searchPackages() {
+ const q = document.getElementById('pkgSearch').value.trim();
+ if (!q) return;
+ const results = document.getElementById('searchResults');
+ results.innerHTML = '<div style="color: var(--text-muted);">Searching...</div>';
+ fetch(`/trazezzo/api/packages/search?q=${encodeURIComponent(q)}`)
+ .then(r => r.json())
+ .then(data => {
+  if (data.error) { results.innerHTML = `<div style="color: var(--error);">${data.error}</div>`; return; }
+  if (!data.results || data.results.length === 0) {
+   results.innerHTML = '<div style="color: var(--text-muted);">No packages found.</div>';
+   return;
+  }
+  let html = '<table style="width: 100%; font-size: 0.82rem;"><thead><tr><th>Package</th><th>Description</th><th></th></tr></thead><tbody>';
+  data.results.forEach(pkg => {
+   html += `<tr style="border-bottom: 1px solid var(--border);">
+    <td style="padding: 4px 8px; font-family: var(--font-mono);"><strong>${pkg.name}</strong></td>
+    <td style="padding: 4px 8px; color: var(--text-muted); font-size: 0.78rem;">${pkg.description || ''}</td>
+    <td style="padding: 4px 8px;"><button class="btn btn-sm btn-primary" style="padding: 2px 8px;" onclick="document.getElementById('pkgName').value='${pkg.name}'; installPackage()">Install</button></td>
+   </tr>`;
+  });
+  html += '</tbody></table>';
+  results.innerHTML = html;
+ });
+}
+
+function installPackage() {
+ const packages = document.getElementById('pkgName').value.trim().split(/\s+/).filter(Boolean);
+ if (!packages.length) { alert('Enter package name(s)'); return; }
+ if (!confirm(`Install ${packages.join(', ')}?`)) return;
+ const btn = event.target;
+ btn.disabled = true;
+ btn.textContent = 'Installing...';
+ fetch('/trazezzo/api/packages/install', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ packages })
+ })
+ .then(r => r.json())
+ .then(data => {
+  btn.disabled = false;
+  btn.textContent = 'Install';
+  if (data.success) {
+   alert(`Installed: ${packages.join(', ')}`);
+  } else {
+   alert(`Failed: ${data.error || data.stderr || 'Unknown error'}`);
+  }
+ });
+}
+
+function removePackage(purge) {
+ const packages = document.getElementById('pkgName').value.trim().split(/\s+/).filter(Boolean);
+ if (!packages.length) { alert('Enter package name(s)'); return; }
+ if (!confirm(`${purge ? 'Purge' : 'Remove'} ${packages.join(', ')}?`)) return;
+ fetch('/trazezzo/api/packages/remove', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ packages, purge })
+ })
+ .then(r => r.json())
+ .then(data => {
+  if (data.success) {
+   alert(`${purge ? 'Purged' : 'Removed'}: ${packages.join(', ')}`);
+  } else {
+   alert(`Failed: ${data.error || data.stderr || 'Unknown error'}`);
+  }
  });
 }
 </script>

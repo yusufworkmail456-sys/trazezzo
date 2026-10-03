@@ -1395,6 +1395,124 @@ async def api_ssh_sessions():
     return {"sessions": list_active_sessions()}
 
 
+# ── Sysctl / Kernel Tuning ────────────────────────────────────────────
+
+@app.get("/sysctl", response_class=HTMLResponse)
+async def sysctl_page(request: Request):
+    from trazezzo.modules.sysctl import get_sysctl
+    params = get_sysctl()
+    return templates.TemplateResponse(request, "sysctl.html", {
+        "request": request,
+        "active": "sysctl",
+        "params": params,
+    })
+
+@app.get("/api/sysctl")
+async def api_sysctl():
+    from trazezzo.modules.sysctl import get_sysctl
+    return get_sysctl()
+
+@app.post("/api/sysctl/set")
+async def api_set_sysctl(request: Request):
+    from trazezzo.modules.sysctl import set_sysctl
+    body = await request.json()
+    return set_sysctl(body.get("key", ""), body.get("value", ""))
+
+
+# ── Database Management ───────────────────────────────────────────────
+
+@app.get("/database", response_class=HTMLResponse)
+async def database_page(request: Request):
+    from trazezzo.modules.database import detect_databases
+    servers = detect_databases()
+    return templates.TemplateResponse(request, "database.html", {
+        "request": request,
+        "active": "database",
+        "servers": servers,
+    })
+
+@app.get("/api/database/info/{db_type}")
+async def api_db_info(db_type: str):
+    from trazezzo.modules.database import db_info
+    return db_info(db_type)
+
+@app.post("/api/database/backup")
+async def api_db_backup(request: Request):
+    from trazezzo.modules.database import db_backup
+    body = await request.json()
+    return db_backup(body.get("db_type", ""), body.get("db_name", ""))
+
+
+# ── Process Renice ────────────────────────────────────────────────────
+
+@app.post("/api/processes/{pid}/renice")
+async def api_renice_process(pid: int, priority: int):
+    from trazezzo.modules.processes import renice_process
+    return renice_process(pid, priority)
+
+
+# ── Package Manager ───────────────────────────────────────────────────
+
+@app.get("/api/packages/search")
+async def api_search_package(q: str):
+    from trazezzo.modules.updates import search_package
+    return search_package(q)
+
+@app.post("/api/packages/install")
+async def api_install_package(request: Request):
+    from trazezzo.modules.updates import install_package
+    body = await request.json()
+    return install_package(body.get("packages", []))
+
+@app.post("/api/packages/remove")
+async def api_remove_package(request: Request):
+    from trazezzo.modules.updates import remove_package
+    body = await request.json()
+    return remove_package(body.get("packages", []), body.get("purge", False))
+
+
+# ── Firewall Editor ───────────────────────────────────────────────────
+
+@app.get("/api/firewall/rules")
+async def api_firewall_rules():
+    from trazezzo.modules.networking import get_firewall_rules
+    return get_firewall_rules()
+
+@app.post("/api/firewall/add")
+async def api_firewall_add(request: Request):
+    from trazezzo.modules.networking import add_firewall_rule
+    body = await request.json()
+    return add_firewall_rule(body.get("action", ""), body.get("port", ""), body.get("proto", "tcp"), body.get("source", ""))
+
+@app.post("/api/firewall/delete")
+async def api_firewall_delete(request: Request):
+    from trazezzo.modules.networking import delete_firewall_rule
+    body = await request.json()
+    return delete_firewall_rule(body.get("rule_num", ""))
+
+@app.post("/api/firewall/toggle")
+async def api_firewall_toggle(request: Request):
+    from trazezzo.modules.networking import toggle_firewall
+    body = await request.json()
+    return toggle_firewall(body.get("enable", False))
+
+
+# ── VPN / Tunnels ────────────────────────────────────────────────────
+
+@app.get("/api/vpn/tunnels")
+async def api_vpn_tunnels():
+    from trazezzo.modules.networking import get_vpn_tunnels
+    return get_vpn_tunnels()
+
+
+# ── systemd Timers ────────────────────────────────────────────────────
+
+@app.get("/api/timers")
+async def api_timers():
+    from trazezzo.modules.cron import get_systemd_timers
+    return get_systemd_timers()
+
+
 # ── Run ───────────────────────────────────────────────────────────────
 
 def run_dashboard():

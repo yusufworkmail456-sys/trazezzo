@@ -90,3 +90,101 @@ def apply_updates() -> dict:
             }
     except Exception as exc:
         return {"error": str(exc)}
+
+
+def install_package(packages: list[str]) -> dict:
+    """Install one or more packages."""
+    pm = detect_package_manager()
+    if not pm:
+        return {"error": "No package manager detected"}
+
+    # Validate package names (alphanumeric + hyphen + dot + plus only)
+    import re
+    for pkg in packages:
+        if not re.match(r"^[a-zA-Z0-9.+\-]+$", pkg):
+            return {"error": f"Invalid package name: {pkg}"}
+
+    try:
+        if pm == "apt":
+            cmd = ["apt-get", "install", "-y", "-q"] + packages
+        elif pm in ("dnf", "yum"):
+            cmd = [pm, "install", "-y", "-q"] + packages
+        elif pm == "pacman":
+            cmd = ["pacman", "-S", "--noconfirm"] + packages
+        elif pm == "zypper":
+            cmd = ["zypper", "--non-interactive", "install"] + packages
+        else:
+            return {"error": f"Install not supported for {pm}"}
+
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        return {
+            "success": result.returncode == 0,
+            "stdout": result.stdout[-2000:],
+            "stderr": result.stderr[-1000:],
+            "command": " ".join(cmd),
+        }
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+def remove_package(packages: list[str], purge: bool = False) -> dict:
+    """Remove one or more packages."""
+    pm = detect_package_manager()
+    if not pm:
+        return {"error": "No package manager detected"}
+
+    import re
+    for pkg in packages:
+        if not re.match(r"^[a-zA-Z0-9.+\-]+$", pkg):
+            return {"error": f"Invalid package name: {pkg}"}
+
+    try:
+        if pm == "apt":
+            cmd = ["apt-get"] + (["purge"] if purge else ["remove"]) + ["-y", "-q"] + packages
+        elif pm in ("dnf", "yum"):
+            cmd = [pm, "remove", "-y", "-q"] + packages
+        elif pm == "pacman":
+            cmd = ["pacman", "-R", "--noconfirm"] + packages
+        elif pm == "zypper":
+            cmd = ["zypper", "--non-interactive", "remove"] + packages
+        else:
+            return {"error": f"Remove not supported for {pm}"}
+
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        return {
+            "success": result.returncode == 0,
+            "stdout": result.stdout[-2000:],
+            "stderr": result.stderr[-1000:],
+            "command": " ".join(cmd),
+        }
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+def search_package(query: str) -> dict:
+    """Search for packages."""
+    pm = detect_package_manager()
+    if not pm:
+        return {"error": "No package manager detected"}
+
+    import re
+    if not re.match(r"^[a-zA-Z0-9.+\- ]+$", query):
+        return {"error": "Invalid search query"}
+
+    results = []
+    try:
+        if pm == "apt":
+            r = subprocess.run(["apt-cache", "search", query], capture_output=True, text=True, timeout=15)
+            for line in r.stdout.strip().split("\n")[:30]:
+                if " - " in line:
+                    parts = line.split(" - ", 1)
+                    results.append({"name": parts[0], "description": parts[1]})
+        elif pm in ("dnf", "yum"):
+            r = subprocess.run([pm, "search", query], capture_output=True, text=True, timeout=15)
+            for line in r.stdout.strip().split("\n")[:30]:
+                if line.strip() and not line.startswith("=") and not line.startswith("Last"):
+                    results.append({"name": line.strip(), "description": ""})
+    except Exception as exc:
+        return {"error": str(exc)}
+
+    return {"results": results, "count": len(results)}

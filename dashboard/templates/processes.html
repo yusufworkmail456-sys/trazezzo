@@ -29,7 +29,8 @@
     <th style="text-align: right; padding: 6px 8px;">MEM (MB)</th>
     <th style="text-align: left; padding: 6px 8px;">Status</th>
     <th style="text-align: left; padding: 6px 8px;">Started</th>
-    <th style="text-align: center; padding: 6px 8px;">Action</th>
+    <th style="text-align: center; padding: 6px 8px;">Nice</th>
+    <th style="text-align: center; padding: 6px 8px;">Actions</th>
    </tr></thead>
    <tbody id="procTableBody">
     {% for p in processes %}
@@ -42,9 +43,12 @@
      <td style="padding: 4px 8px; text-align: right;">{{ p.mem_mb }}</td>
      <td style="padding: 4px 8px;"><span class="badge {% if p.status == 'running' %}active{% elif p.status == 'sleeping' %}inactive{% else %}{% endif %}">{{ p.status }}</span></td>
      <td style="padding: 4px 8px;">{{ p.started }}</td>
-     <td style="padding: 4px 8px; text-align: center;">
-      <button class="btn btn-sm" style="color: var(--error); padding: 2px 8px;" onclick="killProcess({{ p.pid }}, 'TERM')" title="Terminate">TERM</button>
-      <button class="btn btn-sm" style="color: var(--error); padding: 2px 8px;" onclick="killProcess({{ p.pid }}, 'KILL')" title="Force Kill">KILL</button>
+     <td style="padding: 4px 8px; text-align: center; font-family: var(--font-mono);">{{ p.nice }}</td>
+     <td style="padding: 4px 8px; text-align: center; white-space: nowrap;">
+      <button class="btn btn-sm" style="color: var(--warning); padding: 2px 6px;" onclick="reniceProcess({{ p.pid }}, {{ p.nice }}, -1)" title="Higher priority">−</button>
+      <button class="btn btn-sm" style="color: var(--text); padding: 2px 6px;" onclick="reniceProcess({{ p.pid }}, {{ p.nice }}, 1)" title="Lower priority">+</button>
+      <button class="btn btn-sm" style="color: var(--error); padding: 2px 6px;" onclick="killProcess({{ p.pid }}, 'TERM')" title="Terminate">TERM</button>
+      <button class="btn btn-sm" style="color: var(--error); padding: 2px 6px;" onclick="killProcess({{ p.pid }}, 'KILL')" title="Force Kill">KILL</button>
      </td>
     </tr>
     {% endfor %}
@@ -72,9 +76,12 @@ function loadProcesses() {
     <td style="padding: 4px 8px; text-align: right;">${p.mem_mb}</td>
     <td style="padding: 4px 8px;"><span class="badge ${p.status === 'running' ? 'active' : 'inactive'}">${p.status}</span></td>
     <td style="padding: 4px 8px;">${p.started}</td>
-    <td style="padding: 4px 8px; text-align: center;">
-     <button class="btn btn-sm" style="color: var(--error); padding: 2px 8px;" onclick="killProcess(${p.pid}, 'TERM')">TERM</button>
-     <button class="btn btn-sm" style="color: var(--error); padding: 2px 8px;" onclick="killProcess(${p.pid}, 'KILL')">KILL</button>
+    <td style="padding: 4px 8px; text-align: center; font-family: var(--font-mono);">${p.nice}</td>
+    <td style="padding: 4px 8px; text-align: center; white-space: nowrap;">
+     <button class="btn btn-sm" style="color: var(--warning); padding: 2px 6px;" onclick="reniceProcess(${p.pid}, ${p.nice}, -1)" title="Higher priority">−</button>
+     <button class="btn btn-sm" style="color: var(--text); padding: 2px 6px;" onclick="reniceProcess(${p.pid}, ${p.nice}, 1)" title="Lower priority">+</button>
+     <button class="btn btn-sm" style="color: var(--error); padding: 2px 6px;" onclick="killProcess(${p.pid}, 'TERM')">TERM</button>
+     <button class="btn btn-sm" style="color: var(--error); padding: 2px 6px;" onclick="killProcess(${p.pid}, 'KILL')">KILL</button>
     </td>
    </tr>
   `).join('');
@@ -89,6 +96,21 @@ function killProcess(pid, signal) {
  .then(data => {
   if (data.success) {
    alert(`Sent ${signal} to ${data.name} (PID ${pid})`);
+   loadProcesses();
+  } else {
+   alert(`Failed: ${data.error}`);
+  }
+ });
+}
+
+function reniceProcess(pid, currentNice, delta) {
+ const newNice = Math.max(-20, Math.min(19, currentNice + delta));
+ if (newNice === currentNice) return;
+ fetch(`/trazezzo/api/processes/${pid}/renice?priority=${newNice}`, { method: 'POST' })
+ .then(r => r.json())
+ .then(data => {
+  if (data.success) {
+   alert(`Nice changed: ${data.old_nice} → ${data.new_nice} for ${data.name}`);
    loadProcesses();
   } else {
    alert(`Failed: ${data.error}`);

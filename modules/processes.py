@@ -1,6 +1,7 @@
 """Process manager -- htop in browser."""
 
 from __future__ import annotations
+import os
 import signal
 import psutil
 from datetime import datetime
@@ -26,6 +27,7 @@ def get_processes(sort_by: str = "cpu", limit: int = 100) -> list[dict]:
                 "cmd": " ".join(info["cmdline"][:8]) if info.get("cmdline") else "",
                 "started": datetime.fromtimestamp(info["create_time"]).strftime("%H:%M") if info.get("create_time") else "",
                 "tty": info.get("terminal") or "",
+                "nice": p.nice() if hasattr(p, 'nice') else 0,
             })
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
@@ -48,6 +50,23 @@ def kill_process(pid: int, signal_type: str = "TERM") -> dict:
         else:
             p.terminate()
         return {"success": True, "pid": pid, "name": name, "signal": signal_type}
+    except psutil.NoSuchProcess:
+        return {"success": False, "error": f"PID {pid} not found"}
+    except psutil.AccessDenied:
+        return {"success": False, "error": f"Access denied for PID {pid}"}
+    except Exception as exc:
+        return {"success": False, "error": str(exc)}
+
+
+def renice_process(pid: int, priority: int) -> dict:
+    """Change process priority (nice value). -20 = highest, 19 = lowest."""
+    try:
+        p = psutil.Process(pid)
+        name = p.name()
+        old_nice = p.nice()
+        os.setpriority(os.PRIO_PROCESS, pid, priority)
+        new_nice = p.nice()
+        return {"success": True, "pid": pid, "name": name, "old_nice": old_nice, "new_nice": new_nice}
     except psutil.NoSuchProcess:
         return {"success": False, "error": f"PID {pid} not found"}
     except psutil.AccessDenied:

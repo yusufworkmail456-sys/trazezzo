@@ -4,6 +4,52 @@ from __future__ import annotations
 import subprocess
 
 
+def get_systemd_timers() -> dict:
+    """List systemd timers (both enabled and active)."""
+    timers = []
+    try:
+        result = subprocess.run(
+            ["systemctl", "list-timers", "--all", "--no-pager", "--output=json"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            import json
+            data = json.loads(result.stdout)
+            for t in data:
+                timers.append({
+                    "unit": t.get("unit", ""),
+                    "activates": t.get("activates", ""),
+                    "next_elapse": t.get("next_elapse", ""),
+                    "last_trigger": t.get("last_trigger", ""),
+                    "next_elapse_monotonic": "",
+                })
+    except Exception:
+        pass
+
+    # Fallback: parse text output
+    if not timers:
+        try:
+            result = subprocess.run(
+                ["systemctl", "list-timers", "--all", "--no-pager"],
+                capture_output=True, text=True, timeout=5,
+            )
+            for line in result.stdout.split("\n")[1:]:  # skip header
+                if line.strip() and "timer" in line.lower():
+                    parts = line.split()
+                    if len(parts) >= 5:
+                        timers.append({
+                            "unit": parts[-2] if len(parts) >= 2 else "",
+                            "activates": parts[-1] if parts else "",
+                            "next_elapse": " ".join(parts[:3]) if len(parts) >= 3 else "",
+                            "last_trigger": "",
+                            "next_elapse_monotonic": "",
+                        })
+        except Exception:
+            pass
+
+    return {"timers": timers, "count": len(timers)}
+
+
 def get_cron_jobs() -> dict:
     """List all crontab entries."""
     try:

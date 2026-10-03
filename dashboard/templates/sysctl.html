@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo — Kernel Tuning{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>Kernel Tuning (sysctl)</h2>
+ <div class="desc">Runtime kernel parameters — changes are temporary (not persisted)</div>
+</div>
+
+<div class="card">
+ <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+  <div class="card-title" style="margin: 0;">Active Parameters</div>
+  <button class="btn btn-sm btn-primary" onclick="loadSysctl()">Refresh</button>
+ </div>
+ <div id="sysctlBody">
+  {% for p in params %}
+  <div style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border);">
+   <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); min-width: 30px;">{{ loop.index }}</span>
+   <span class="badge {% if p.category == 'Network' %}active{% elif p.category == 'Memory' %}warn{% elif p.category == 'Kernel' %}inactive{% else %}warn{% endif %}" style="min-width: 80px;">{{ p.category }}</span>
+   <span style="font-family: var(--font-mono); font-size: 0.82rem; flex: 1;">{{ p.key }}</span>
+   <input type="text" id="val-{{ loop.index }}" value="{{ p.value }}" data-key="{{ p.key }}" style="font-family: var(--font-mono); font-size: 0.8rem; padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px; width: 180px;">
+   <button class="btn btn-sm btn-primary" style="padding: 2px 10px;" onclick="setSysctl({{ loop.index }})">Apply</button>
+  </div>
+  {% endfor %}
+ </div>
+ <div style="margin-top: 12px; font-size: 0.75rem; color: var(--text-muted);">
+  Changes apply at runtime only. To persist, edit <code>/etc/sysctl.d/</code> manually.
+ </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+function loadSysctl() {
+ fetch('/trazezzo/api/sysctl')
+ .then(r => r.json())
+ .then(params => {
+  const body = document.getElementById('sysctlBody');
+  body.innerHTML = params.map((p, i) => `
+   <div style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border);">
+    <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); min-width: 30px;">${i+1}</span>
+    <span class="badge ${p.category === 'Network' ? 'active' : p.category === 'Memory' ? 'warn' : 'inactive'}" style="min-width: 80px;">${p.category}</span>
+    <span style="font-family: var(--font-mono); font-size: 0.82rem; flex: 1;">${p.key}</span>
+    <input type="text" id="val-${i+1}" value="${p.value}" data-key="${p.key}" style="font-family: var(--font-mono); font-size: 0.8rem; padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px; width: 180px;">
+    <button class="btn btn-sm btn-primary" style="padding: 2px 10px;" onclick="setSysctl(${i+1})">Apply</button>
+   </div>
+  `).join('');
+ });
+}
+
+async function setSysctl(idx) {
+ const input = document.getElementById('val-' + idx);
+ const key = input.dataset.key;
+ const value = input.value.trim();
+ const confirmed = await showConfirm(`Set ${key} = ${value}?\n\nThis changes kernel behavior at runtime.`, {icon: 'warning', title: 'Kernel Tuning', confirmText: 'Apply'});
+ if (!confirmed) return;
+ fetch('/trazezzo/api/sysctl/set', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ key, value })
+ })
+ .then(r => r.json())
+ .then(data => {
+  if (data.success) {
+   alert(`✓ ${data.key} = ${data.value}`, 'success');
+  } else {
+   alert(`✗ ${data.error}`, 'error');
+  }
+ });
+}
+</script>
+{% endblock %}

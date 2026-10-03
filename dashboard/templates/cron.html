@@ -51,6 +51,17 @@
   {% endif %}
  </div>
 </div>
+
+<!-- systemd Timers -->
+<div class="card">
+ <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+  <div class="card-title" style="margin: 0;">systemd Timers</div>
+  <button class="btn btn-sm" onclick="loadTimers()">Refresh</button>
+ </div>
+ <div id="timersBody">
+  <div style="color: var(--text-muted);">Click "Refresh" to load systemd timers.</div>
+ </div>
+</div>
 {% endblock %}
 
 {% block script %}
@@ -78,6 +89,29 @@ function deleteCron(index) {
  .then(data => {
   if (data.success) { alert('Cron job deleted'); location.reload(); }
   else { alert(`Failed: ${data.error}`); }
+ });
+}
+
+function loadTimers() {
+ fetch('/trazezzo/api/timers')
+ .then(r => r.json())
+ .then(data => {
+  const body = document.getElementById('timersBody');
+  if (!data.timers || data.timers.length === 0) {
+   body.innerHTML = '<div style="color: var(--text-muted);">No systemd timers found.</div>';
+   return;
+  }
+  let html = '<table style="width: 100%; font-size: 0.82rem;"><thead><tr><th>Timer Unit</th><th>Activates</th><th>Next Elapse</th><th>Last Trigger</th></tr></thead><tbody>';
+  data.timers.forEach(t => {
+   html += `<tr style="border-bottom: 1px solid var(--border);">
+    <td style="padding: 4px 8px; font-family: var(--font-mono);">${t.unit}</td>
+    <td style="padding: 4px 8px; font-family: var(--font-mono);">${t.activates}</td>
+    <td style="padding: 4px 8px;">${t.next_elapse}</td>
+    <td style="padding: 4px 8px;">${t.last_trigger || '-'}</td>
+   </tr>`;
+  });
+  html += '</tbody></table>';
+  body.innerHTML = html;
  });
 }
 </script>
