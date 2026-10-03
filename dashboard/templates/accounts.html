@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Trazezzo -- Access{% endblock %}
+{% block title %}Trazezzo — Access{% endblock %}
 {% block content %}
 <div class="page-header">
  <h2>Access</h2>
- <div class="desc">{{ users | length }} login users -- {{ sessions | length }} active sessions -- {{ ssh_keys.count }} SSH keys</div>
+ <div class="desc">{{ users | length }} login users — {{ sessions | length }} active sessions — {{ ssh_keys.count }} SSH keys</div>
 </div>
 
 <div style="display: flex; gap: 8px; margin-bottom: 16px;">
@@ -20,7 +20,7 @@
    <thead><tr><th>Username</th><th>UID</th><th>Shell</th><th>Home</th></tr></thead>
    <tbody>
    {% for u in users %}
-   <tr>
+   <tr class="user-row">
     <td><strong>{{ u.username }}</strong></td>
     <td>{{ u.uid }}</td>
     <td>{{ u.shell }}</td>
@@ -29,6 +29,7 @@
    {% endfor %}
    </tbody>
   </table>
+  <div id="userPagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 12px;"></div>
  </div>
  <div class="card">
   <div class="card-title">Groups</div>
@@ -36,7 +37,7 @@
    <thead><tr><th>Name</th><th>GID</th><th>Members</th></tr></thead>
    <tbody>
    {% for g in groups %}
-   <tr>
+   <tr class="group-row">
     <td><strong>{{ g.name }}</strong></td>
     <td>{{ g.gid }}</td>
     <td>{{ g.members | join(', ') }}</td>
@@ -44,6 +45,7 @@
    {% endfor %}
    </tbody>
   </table>
+  <div id="groupPagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 12px;"></div>
  </div>
 </div>
 </div>
@@ -56,7 +58,7 @@
   <thead><tr><th>Session</th><th>User</th><th>Seat</th></tr></thead>
   <tbody>
   {% for s in sessions %}
-  <tr>
+  <tr class="sess-row">
    <td>{{ s.session }}</td>
    <td><strong>{{ s.user }}</strong></td>
    <td>{{ s.seat }}</td>
@@ -64,6 +66,7 @@
   {% endfor %}
   </tbody>
  </table>
+ <div id="sessPagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 12px;"></div>
  {% else %}
  <div style="color: var(--text-muted);">No active login sessions</div>
  {% endif %}
@@ -78,7 +81,7 @@
   <thead><tr><th>User</th><th>Type</th><th>Fingerprint</th><th>Comment</th></tr></thead>
   <tbody>
   {% for k in ssh_keys.keys_list %}
-  <tr>
+  <tr class="sshkey-row">
    <td><strong>{{ k.user }}</strong></td>
    <td>{{ k.key_type }}</td>
    <td style="font-family: monospace; font-size: 0.8rem;">{{ k.fingerprint }}</td>
@@ -87,6 +90,7 @@
   {% endfor %}
   </tbody>
  </table>
+ <div id="sshkeyPagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 12px;"></div>
  {% else %}
  <div style="color: var(--text-muted);">No authorized keys found</div>
  {% endif %}
@@ -98,10 +102,11 @@
   <thead><tr><th>File</th><th>Type</th></tr></thead>
   <tbody>
   {% for k in host_keys %}
-  <tr><td>{{ k.file }}</td><td>{{ k.key_type }}</td></tr>
+  <tr class="hostkey-row"><td>{{ k.file }}</td><td>{{ k.key_type }}</td></tr>
   {% endfor %}
   </tbody>
  </table>
+ <div id="hostkeyPagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 12px;"></div>
  {% else %}
  <div style="color: var(--text-muted);">No host keys found</div>
  {% endif %}
@@ -119,6 +124,44 @@
 
 {% block script %}
 <script>
+const PER_PAGE = 20;
+const pagState = {};
+
+function makePaginator(rowClass, pagId) {
+ let page = 1;
+ return function render() {
+  const rows = document.querySelectorAll('.' + rowClass);
+  const total = rows.length;
+  const totalPages = Math.ceil(total / PER_PAGE);
+  if (page > totalPages) page = totalPages;
+  if (page < 1) page = 1;
+  const start = (page - 1) * PER_PAGE;
+  const end = start + PER_PAGE;
+  rows.forEach((row, i) => {
+   row.style.display = (i >= start && i < end) ? '' : 'none';
+  });
+  const pag = document.getElementById(pagId);
+  if (totalPages <= 1) { pag.innerHTML = ''; return; }
+  let html = '';
+  html += `<button class="btn btn-sm" ${page === 1 ? 'disabled' : ''} onclick="${rowClass}Page--; ${rowClass}Render()">\u2039 Prev</button>`;
+  html += `<span style="font-size: 0.82rem; color: var(--text-muted);">Page ${page} / ${totalPages}</span>`;
+  html += `<button class="btn btn-sm" ${page === totalPages ? 'disabled' : ''} onclick="${rowClass}Page++; ${rowClass}Render()">Next \u203A</button>`;
+  pag.innerHTML = html;
+ };
+}
+
+function setupPagination(rowClass, pagId) {
+ const renderFn = makePaginator(rowClass, pagId);
+ window[rowClass + 'Render'] = renderFn;
+ window[rowClass + 'Page'] = 1;
+ renderFn();
+}
+
+['user-row', 'group-row', 'sess-row', 'sshkey-row', 'hostkey-row'].forEach((cls, i) => {
+ const pagId = ['userPagination', 'groupPagination', 'sessPagination', 'sshkeyPagination', 'hostkeyPagination'][i];
+ setupPagination(cls, pagId);
+});
+
 function switchTab(tab) {
  ['users', 'sessions', 'ssh'].forEach(t => {
   document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
