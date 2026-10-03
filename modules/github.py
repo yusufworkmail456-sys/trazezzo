@@ -326,3 +326,145 @@ def get_repo_info(owner: str, repo: str) -> dict:
             }
     except Exception as exc:
         return {"error": str(exc)}
+
+
+# ── Repo content access (for agent) ─────────────────────────────────
+
+def read_repo_file(owner: str, repo: str, path: str, branch: str = "") -> dict:
+    """Read a file from a repo via GitHub API."""
+    token = get_token()
+    if not token:
+        return {"error": "No token configured"}
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            params = {}
+            if branch:
+                params["ref"] = branch
+            resp = client.get(
+                f"{GITHUB_API}/repos/{owner}/{repo}/contents/{path}",
+                headers=_headers(),
+                params=params,
+            )
+            if resp.status_code == 404:
+                return {"error": f"File not found: {path}"}
+            resp.raise_for_status()
+            data = resp.json()
+            if data.get("type") == "file":
+                import base64
+                content = base64.b64decode(data.get("content", "")).decode("utf-8", errors="replace")
+                return {
+                    "success": True,
+                    "path": path,
+                    "content": content[:8000],
+                    "sha": data.get("sha", ""),
+                    "size": data.get("size", 0),
+                }
+            elif data.get("type") == "dir":
+                entries = [{"name": e["name"], "type": e["type"], "path": e["path"]} for e in data]
+                return {"success": True, "type": "dir", "entries": entries}
+            else:
+                return {"error": f"Unexpected type: {data.get('type')}"}
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+def read_repo_tree(owner: str, repo: str, branch: str = "") -> dict:
+    """Get repo file tree (flat list of paths)."""
+    token = get_token()
+    if not token:
+        return {"error": "No token configured"}
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            # Get default branch if not specified
+            if not branch:
+                info_resp = client.get(f"{GITHUB_API}/repos/{owner}/{repo}", headers=_headers())
+                info_resp.raise_for_status()
+                branch = info_resp.json().get("default_branch", "main")
+
+            # Get tree (recursive)
+            resp = client.get(
+                f"{GITHUB_API}/repos/{owner}/{repo}/git/trees/{branch}",
+                headers=_headers(),
+                params={"recursive": "1"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            tree = data.get("tree", [])
+            # Filter: only blobs (files), skip .git, limit to 200 entries
+            paths = [e["path"] for e in tree if e.get("type") == "blob"][:200]
+            return {
+                "success": True,
+                "branch": branch,
+                "files": paths,
+                "total": tree[0].get("size", 0) if tree else 0,
+                "truncated": data.get("truncated", False),
+            }
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+def push_repo_file(owner: str, repo: str, path: str, content: str, message: str, branch: str = "main", sha: str = "") -> dict:
+    """Push (create or update) a file to a repo via GitHub API."""
+    token = get_token()
+    if not token:
+        return {"error": "No token configured"}
+    try:
+        import base64
+        encoded = base64.b64encode(content.encode()).decode()
+
+        # If no sha provided, try to get existing file sha
+        if not sha:
+            existing = read_repo_file(owner, repo, path, branch)
+            if existing.get("sha"):
+                sha = existing["sha"]
+
+        body = {
+            "message": message,
+            "content": encoded,
+            "branch": branch,
+        }
+        if sha:
+            body["sha"] = sha
+
+        with httpx.Client(timeout=20.0) as client:
+            resp = client.put(
+                f"{GITHUB_API}/repos/{owner}/{repo}/contents/{path}",
+                headers=_headers(),
+                json=body,
+            )
+            if resp.status_code in (200, 201):
+                data = resp.json()
+                return {
+                    "success": True,
+                    "path": path,
+                    "branch": branch,
+                    "commit_sha": data.get("commit", {}).get("sha", "")[:7],
+                    "commit_url": data.get("commit", {}).get("html_url", ""),
+                }
+            else:
+                return {"success": False, "error": resp.json().get("message", "Push failed"), "status": resp.status_code}
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+def get_linked_repos() -> list[dict]:
+    """Get repos auto-linked to domains/services on this server."""
+    try:
+        from trazezzo.modules.domain_inventory import get_domain_inventory
+        inventory = get_domain_inventory()
+        linked = []
+        seen_repos = set()
+        for entry in inventory:
+            repo = entry.get("repo", "")
+            if repo and repo not in seen_repos:
+                seen_repos.add(repo)
+                linked.append({
+                    "repo": repo,
+                    "domain": entry["domain"],
+                    "path": entry["path"],
+                    "service": entry.get("service_name", ""),
+                    "port": entry.get("port"),
+                })
+        return linked
+    except Exception:
+        return []

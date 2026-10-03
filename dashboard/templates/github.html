@@ -112,6 +112,15 @@
  </div>
 </div>
 
+{# ── Domain & App Inventory ─────────────────────────────────── #}
+<div class="gh-card">
+ <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+  <div class="gh-card-title" style="margin: 0;">Domain &amp; App Inventory</div>
+  <button class="btn btn-sm" onclick="loadDomains()">Refresh</button>
+ </div>
+ <div id="domainInventory" style="color: var(--text-muted); font-size: 0.82rem;">Click "Refresh" to auto-detect domains and apps.</div>
+</div>
+
 {% endblock %}
 
 {% block script %}
@@ -267,5 +276,44 @@ async function createPRFromPush() {
 {% if has_token %}
 setTimeout(loadRepos, 500);
 {% endif %}
+
+async function loadDomains() {
+ const container = document.getElementById('domainInventory');
+ container.innerHTML = '<div style="color: var(--text-muted);">Detecting domains...</div>';
+ const resp = await fetch('/trazezzo/api/domain-inventory');
+ const data = await resp.json();
+ if (!data.domains || data.domains.length === 0) {
+  container.innerHTML = '<div style="color: var(--text-muted);">No domains detected. Make sure nginx is running with site configs.</div>';
+  return;
+ }
+ let html = '<div style="overflow-x: auto;"><table style="width: 100%; font-size: 0.82rem;"><thead><tr>';
+ html += '<th style="text-align: left; padding: 6px 8px;">Domain</th>';
+ html += '<th style="text-align: left; padding: 6px 8px;">Path</th>';
+ html += '<th style="text-align: left; padding: 6px 8px;">Proxy Target</th>';
+ html += '<th style="text-align: left; padding: 6px 8px;">Service</th>';
+ html += '<th style="text-align: left; padding: 6px 8px;">Repo</th>';
+ html += '<th style="text-align: left; padding: 6px 8px;">SSL</th>';
+ html += '</tr></thead><tbody>';
+ data.domains.forEach(d => {
+  const sslBadge = d.ssl && d.ssl.has_ssl
+   ? (d.ssl.expired ? '<span class="badge failed">EXPIRED</span>'
+      : d.ssl.expiring_soon ? `<span class="badge" style="background: var(--warning); color: #1e1e1e;">${d.ssl.days_left}d</span>`
+      : `<span class="badge active">${d.ssl.days_left}d</span>`)
+   : '<span style="color: var(--text-muted);">—</span>';
+  const svcBadge = d.service_name
+   ? `<span class="badge ${d.service_status === 'active' ? 'active' : 'failed'}">${d.service_name}</span>`
+   : '<span style="color: var(--text-muted);">—</span>';
+  html += `<tr style="border-bottom: 1px solid var(--border);">
+   <td style="padding: 4px 8px;"><strong>${d.domain}</strong></td>
+   <td style="padding: 4px 8px; font-family: monospace;">${d.path}</td>
+   <td style="padding: 4px 8px; font-family: monospace; font-size: 0.75rem;">${d.port || '—'}${d.proxy_target ? ' (' + d.proxy_target.split('//').pop() + ')' : ''}</td>
+   <td style="padding: 4px 8px;">${svcBadge}</td>
+   <td style="padding: 4px 8px; font-family: monospace; font-size: 0.72rem;">${d.repo ? '<a href="https://github.com/' + d.repo + '" target="_blank">' + d.repo + '</a>' : '<span style="color: var(--text-muted);">not linked</span>'}</td>
+   <td style="padding: 4px 8px;">${sslBadge}</td>
+  </tr>`;
+ });
+ html += '</tbody></table></div>';
+ container.innerHTML = html;
+}
 </script>
 {% endblock %}

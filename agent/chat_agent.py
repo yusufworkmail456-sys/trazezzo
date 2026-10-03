@@ -181,6 +181,41 @@ def execute_tool(action: dict) -> dict:
         if action_type not in ("start", "stop", "restart", "status", "enable", "disable"):
             return {"success": False, "error": f"Invalid service action: {action_type}"}
         return execute_command(f"systemctl {action_type} {unit}")
+    elif tool == "read_repo_file":
+        from trazezzo.modules.github import read_repo_file
+        owner = action.get("owner", "")
+        repo = action.get("repo", "")
+        path = action.get("path", "")
+        branch = action.get("branch", "")
+        return read_repo_file(owner, repo, path, branch)
+    elif tool == "read_repo_tree":
+        from trazezzo.modules.github import read_repo_tree
+        owner = action.get("owner", "")
+        repo = action.get("repo", "")
+        branch = action.get("branch", "")
+        return read_repo_tree(owner, repo, branch)
+    elif tool == "push_repo_file":
+        from trazezzo.modules.github import push_repo_file
+        owner = action.get("owner", "")
+        repo = action.get("repo", "")
+        path = action.get("path", "")
+        content = action.get("content", "")
+        message = action.get("message", "Update from Trazezzo")
+        branch = action.get("branch", "main")
+        sha = action.get("sha", "")
+        return push_repo_file(owner, repo, path, content, message, branch, sha)
+    elif tool == "create_pr":
+        from trazezzo.modules.github import create_pull_request
+        owner = action.get("owner", "")
+        repo = action.get("repo", "")
+        title = action.get("title", "PR from Trazezzo")
+        head = action.get("head", "")
+        base = action.get("base", "main")
+        body = action.get("body", "")
+        return create_pull_request(owner, repo, title, head, base, body)
+    elif tool == "domain_inventory":
+        from trazezzo.modules.domain_inventory import get_domain_inventory
+        return {"success": True, "domains": get_domain_inventory()}
     else:
         return {"success": False, "error": f"Unknown tool: {tool}"}
 
@@ -213,23 +248,25 @@ AGENT_SYSTEM_PROMPT = """Kamu adalah Trazezzo Agent, AI server operations assist
 
 ## Mode: Agent (Full Operation)
 
-Kamu BISA menjalankan command di server. Gunakan tools berikut untuk mendiagnosis dan memperbaiki masalah.
+Kamu BISA menjalankan command di server DAN membaca/mengubah kode di repo GitHub yang terhubung. Gunakan tools berikut untuk mendiagnosis dan memperbaiki masalah.
 
 ### Tools Tersedia
 
 Keluarkan action dalam format ```action ... ``` block (JSON). Server akan eksekusi dan berikan hasilnya kembali ke kamu.
+
+**System Tools:**
 
 1. **exec** — jalankan shell command
 ```action
 {"tool": "exec", "command": "ps aux --sort=-%cpu | head -20"}
 ```
 
-2. **read_file** — baca file
+2. **read_file** — baca file di server
 ```action
 {"tool": "read_file", "path": "/etc/nginx/nginx.conf"}
 ```
 
-3. **write_file** — tulis/edit file
+3. **write_file** — tulis/edit file di server
 ```action
 {"tool": "write_file", "path": "/path/to/file", "content": "file content here"}
 ```
@@ -239,32 +276,62 @@ Keluarkan action dalam format ```action ... ``` block (JSON). Server akan ekseku
 {"tool": "list_dir", "path": "/var/log"}
 ```
 
-5. **git_push** — git add + commit + push
-```action
-{"tool": "git_push", "repo_path": "/root/hermes-fullset", "message": "fix: update config", "branch": "main"}
-```
-
-6. **service_action** — manage systemd service
+5. **service_action** — manage systemd service
 ```action
 {"tool": "service_action", "unit": "nginx", "action": "restart"}
 ```
 
+6. **domain_inventory** — list semua domain/app yang running di server ini
+```action
+{"tool": "domain_inventory"}
+```
+
+**Repo Tools (GitHub API):**
+
+7. **read_repo_file** — baca file dari repo GitHub
+```action
+{"tool": "read_repo_file", "owner": "username", "repo": "repo-name", "path": "src/app.py", "branch": "main"}
+```
+
+8. **read_repo_tree** — list struktur file repo
+```action
+{"tool": "read_repo_tree", "owner": "username", "repo": "repo-name", "branch": "main"}
+```
+
+9. **push_repo_file** — push perubahan file ke repo (butuh persetujuan user)
+```action
+{"tool": "push_repo_file", "owner": "username", "repo": "repo-name", "path": "src/app.py", "content": "fixed code here", "message": "fix: timeout issue", "branch": "main"}
+```
+
+10. **create_pr** — create pull request
+```action
+{"tool": "create_pr", "owner": "username", "repo": "repo-name", "title": "Fix timeout", "head": "fix-timeout", "base": "main", "body": "Fixed timeout issue in app.py"}
+```
+
+11. **git_push** — git add + commit + push di repo lokal server
+```action
+{"tool": "git_push", "repo_path": "/root/project", "message": "fix: update config", "branch": "main"}
+```
+
+### Alur Kerja
+
+1. Diagnosis masalah: baca log (`exec`), cek service (`service_action`), cek domain inventory (`domain_inventory`)
+2. Jika masalah terkait kode: baca repo (`read_repo_tree` → `read_repo_file`)
+3. Cross-reference: log error → kode di repo → temukan root cause
+4. Usulkan fix: edit kode (`push_repo_file`) dengan persetujuan user
+5. Deploy: restart service (`service_action`) dengan persetujuan user
+6. Verifikasi: cek log lagi, pastikan error hilang
+
 ### Aturan
 
 - Jalankan command satu per satu, tunggu hasilnya, lalu tentukan langkah berikutnya
-- Untuk masalah performa: cek CPU (`ps aux --sort=-%cpu`), memory (`free -h`), disk (`df -h`), load (`cat /proc/loadavg`)
-- Untuk bug di aplikasi: baca file source, analisis, tulis fix dengan `write_file`
-- Untuk deploy: jalankan command deploy, jika perlu push ke git
-- JANGAN jalankan command berbahaya (rm -rf /, mkfs, dd ke disk, shutdown, reboot)
-- Selalu jelaskan apa yang kamu lakukan dan kenapa
-- Setelah eksekusi, berikan ringkasan apa yang terjadi dan langkah selanjutnya
-
-### Format Jawaban
-
-- Gunakan Bahasa Indonesia
-- Singkat dan actionable
-- Jelaskan diagnosis, lalu jalankan fix
-- Berikan ringkasan hasil setelah eksekusi
+- Untuk masalah performa: cek CPU, memory, disk, load
+- Untuk bug di aplikasi: baca log → baca repo → analisis → fix
+- Untuk deploy: push code → restart service → verify
+- JANGAN jalankan command berbahaya (rm -rf /, mkfs, dd, shutdown, reboot)
+- SELALU jelaskan apa yang kamu lakukan dan kenapa
+- Setelah eksekusi, berikan ringkasan apa yang terjadi
+- Gunakan Bahasa Indonesia, singkat dan actionable
 """
 
 

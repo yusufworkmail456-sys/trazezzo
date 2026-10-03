@@ -1528,6 +1528,31 @@ async def api_timers():
 
 # ── Run ───────────────────────────────────────────────────────────────
 
+# ── Domain/App Inventory ─────────────────────────────────────────────
+
+@app.get("/api/domain-inventory")
+async def api_domain_inventory():
+    from trazezzo.modules.domain_inventory import get_domain_inventory
+    return {"domains": get_domain_inventory()}
+
+@app.get("/api/github/read-file")
+async def api_github_read_file(owner: str, repo: str, path: str, branch: str = ""):
+    from trazezzo.modules.github import read_repo_file
+    return read_repo_file(owner, repo, path, branch)
+
+@app.get("/api/github/read-tree")
+async def api_github_read_tree(owner: str, repo: str, branch: str = ""):
+    from trazezzo.modules.github import read_repo_tree
+    return read_repo_tree(owner, repo, branch)
+
+@app.get("/api/github/linked-repos")
+async def api_github_linked_repos():
+    from trazezzo.modules.github import get_linked_repos
+    return {"repos": get_linked_repos()}
+
+
+# ── Run ───────────────────────────────────────────────────────────────
+
 def run_dashboard():
     """Run the dashboard server."""
     import uvicorn
