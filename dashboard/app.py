@@ -1567,6 +1567,29 @@ async def api_github_linked_repos():
     from trazezzo.modules.github import get_linked_repos
     return {"repos": get_linked_repos()}
 
+# ── App Inventory ────────────────────────────────────────────────────
+
+@app.get("/api/app-inventory")
+async def api_app_inventory():
+    from trazezzo.modules.app_inventory import get_app_inventory
+    return {"apps": get_app_inventory()}
+
+@app.get("/api/app-inventory/{port}/context")
+async def api_app_context(port: int):
+    from trazezzo.modules.app_inventory import get_app_context
+    return get_app_context(port)
+
+@app.post("/api/app-inventory/{port}/override")
+async def api_app_override(port: int, request: Request):
+    from trazezzo.modules.app_inventory import set_app_override
+    body = await request.json()
+    return set_app_override(port, body.get("repo"), body.get("description"))
+
+@app.get("/api/app-inventory/repos")
+async def api_available_repos():
+    from trazezzo.modules.app_inventory import get_available_repos
+    return {"repos": get_available_repos()}
+
 @app.get("/api/github/tracked")
 async def api_github_tracked():
     from trazezzo.modules.github import list_tracked_repos

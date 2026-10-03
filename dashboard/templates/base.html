@@ -412,6 +412,13 @@
         .mode-btn.active { background: var(--primary); color: white; }
         .mode-btn.active.warn { background: var(--error); }
         .chat-messages { flex: 1; overflow-y: auto; padding: 14px; }
+        .session-tab { padding: 3px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); font-size: 0.72rem; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 4px; transition: all 0.15s; }
+        .session-tab:hover { border-color: var(--primary); }
+        .session-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .session-tab .close-x { font-size: 0.8rem; opacity: 0.6; margin-left: 2px; }
+        .session-tab .close-x:hover { opacity: 1; }
+        .session-add { padding: 3px 8px; border-radius: 6px; border: 1px dashed var(--border); background: transparent; font-size: 0.82rem; cursor: pointer; color: var(--text-muted); white-space: nowrap; }
+        .session-add:hover { border-color: var(--primary); color: var(--primary); }
         .chat-msg { margin-bottom: 10px; max-width: 90%; }
         .chat-msg.user { margin-left: auto; }
         .chat-msg .bubble { padding: 10px 14px; border-radius: 12px; font-size: 0.85rem; line-height: 1.5; }
@@ -568,7 +575,7 @@
             <a href="/trazezzo/credentials" class="nav-item {% if active == 'credentials' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span> Credentials</a>
 
             <div class="nav-section">Tools</div>
-            <a href="/trazezzo/github" class="nav-item {% if active == 'github' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg></span> GitHub</a>
+            <a href="/trazezzo/github" class="nav-item {% if active == 'github' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span> App Inventory</a>
             <a href="/trazezzo/sync" class="nav-item {% if active == 'sync' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span> Sync &amp; Archive</a>
             <a href="/trazezzo/processes" class="nav-item {% if active == 'processes' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span> Processes</a>
             <a href="/trazezzo/connections" class="nav-item {% if active == 'connections' %}active{% endif %}"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span> Connections</a>
@@ -640,12 +647,15 @@
             <div class="title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg> AI Assistant</div>
             <div class="chat-header-actions">
                 <button class="chat-expand-btn" onclick="toggleChatExpand()" title="Expand chat"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/><polyline points="15 18 15 18 21 12"/></svg></button>
-                <button class="chat-clear-btn" onclick="clearChat()" title="Clear chat history"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                <button class="chat-clear-btn" onclick="clearChat()" title="Clear current session"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
                 <div class="mode-toggle">
                     <button class="mode-btn active" id="modeCalm" onclick="setProactiveMode('calm')">Calm</button>
                     <button class="mode-btn" id="modeAggressive" onclick="setProactiveMode('aggressive')">Aggressive</button>
                 </div>
             </div>
+        </div>
+        <!-- Session tabs -->
+        <div class="session-tabs" id="sessionTabs" style="display:flex; gap:4px; padding:6px 10px; border-bottom:1px solid var(--border); overflow-x:auto; align-items:center;">
         </div>
         <!-- Auto recommendations -->
         <div class="rec-panel">
@@ -918,37 +928,182 @@
         addMessage(data.success ? '🚫 Rejected.' : '⚠ ' + (data.error || 'Failed'), 'bot');
     }
 
-    // ── Chat (with localStorage persistence) ──────────────────
-    const CHAT_STORAGE_KEY = 'trazezzo_chat_history';
+    // ── Multi-session chat (max 5, 1 day TTL) ────────────────
+    const SESSIONS_KEY = 'trazezzo_sessions';
+    const MAX_SESSIONS = 5;
+    const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 1 day
+    let sessions = [];
+    let activeSessionId = null;
+
+    function loadSessions() {
+        try {
+            const raw = localStorage.getItem(SESSIONS_KEY);
+            if (raw) {
+                const now = Date.now();
+                sessions = JSON.parse(raw).filter(s => (now - s.created) < SESSION_TTL_MS);
+                if (sessions.length === 0) {
+                    sessions = [createSession('System', 'system')];
+                }
+            } else {
+                sessions = [createSession('System', 'system')];
+            }
+        } catch(e) {
+            sessions = [createSession('System', 'system')];
+        }
+        // Migrate old single history if exists
+        try {
+            const old = localStorage.getItem('trazezzo_chat_history');
+            if (old && sessions.length === 1 && sessions[0].history.length === 0) {
+                sessions[0].history = JSON.parse(old).slice(-20);
+                localStorage.removeItem('trazezzo_chat_history');
+            }
+        } catch(e) {}
+        activeSessionId = sessions[0].id;
+        saveSessions();
+        renderSessionTabs();
+        renderActiveSession();
+    }
+
+    function createSession(title, scope, appContext) {
+        return {
+            id: 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+            title: title,
+            scope: scope || 'system',
+            appContext: appContext || null,
+            history: [],
+            created: Date.now(),
+        };
+    }
+
+    function saveSessions() {
+        try {
+            localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
+        } catch(e) {}
+    }
+
+    function getActiveSession() {
+        return sessions.find(s => s.id === activeSessionId) || sessions[0];
+    }
+
+    function renderSessionTabs() {
+        const container = document.getElementById('sessionTabs');
+        if (!container) return;
+        let html = '';
+        for (const s of sessions) {
+            const active = s.id === activeSessionId ? ' active' : '';
+            html += `<div class="session-tab${active}" onclick="switchSession('${s.id}')" title="${s.scope === 'system' ? 'System' : s.title}">${s.title.length > 12 ? s.title.substring(0, 12) + '…' : s.title}`;
+            if (sessions.length > 1) {
+                html += `<span class="close-x" onclick="event.stopPropagation(); deleteSession('${s.id}')">&times;</span>`;
+            }
+            html += `</div>`;
+        }
+        if (sessions.length < MAX_SESSIONS) {
+            html += `<button class="session-add" onclick="newSession()">+ New</button>`;
+        }
+        container.innerHTML = html;
+    }
+
+    function switchSession(id) {
+        activeSessionId = id;
+        renderSessionTabs();
+        renderActiveSession();
+        // Update scope selector
+        const session = getActiveSession();
+        const select = document.getElementById('chatScope');
+        if (select) {
+            if (session.scope && session.scope !== 'system') {
+                select.value = session.scope;
+            } else {
+                select.value = 'system';
+            }
+        }
+    }
+
+    function newSession(title, scope, appContext) {
+        if (sessions.length >= MAX_SESSIONS) {
+            alert('Maksimal ' + MAX_SESSIONS + ' session. Hapus salah satu dulu.', 'warning');
+            return;
+        }
+        const session = createSession(title || 'System', scope || 'system', appContext);
+        sessions.push(session);
+        activeSessionId = session.id;
+        saveSessions();
+        renderSessionTabs();
+        renderActiveSession();
+    }
+
+    function deleteSession(id) {
+        if (sessions.length <= 1) {
+            alert('Minimal 1 session harus ada.', 'warning');
+            return;
+        }
+        sessions = sessions.filter(s => s.id !== id);
+        if (activeSessionId === id) {
+            activeSessionId = sessions[0].id;
+        }
+        saveSessions();
+        renderSessionTabs();
+        renderActiveSession();
+    }
+
+    function renderActiveSession() {
+        const session = getActiveSession();
+        const container = document.getElementById('chatMessages');
+        container.innerHTML = '';
+        for (const msg of session.history) {
+            const div = document.createElement('div');
+            div.className = `chat-msg ${msg.role === 'user' ? 'user' : 'bot'}`;
+            div.innerHTML = `<div class="bubble">${escapeHtml(msg.content)}</div>`;
+            container.appendChild(div);
+        }
+        container.scrollTop = container.scrollHeight;
+        if (session.history.length === 0) {
+            let welcome = 'Halo! Aku Trazezzo AI. Tanya apapun tentang servermu.';
+            if (session.appContext) {
+                welcome = `Halo! Aku agent untuk <b>${session.appContext.title}</b>.<br><br>`;
+                welcome += `<span style="font-size:0.78rem;color:var(--text-muted);">`;
+                welcome += `Domain: ${session.appContext.domain}<br>`;
+                welcome += `Port: ${session.appContext.port}<br>`;
+                if (session.appContext.service) welcome += `Service: ${session.appContext.service}<br>`;
+                if (session.appContext.repo) welcome += `Repo: ${session.appContext.repo}<br>`;
+                if (session.appContext.description) welcome += `<br>${session.appContext.description}`;
+                welcome += `</span>`;
+            }
+            addBotMessage(welcome);
+        }
+    }
+
+    function getChatHistory() {
+        const session = getActiveSession();
+        return session ? session.history : [];
+    }
+
+    function pushChatHistory(role, content) {
+        const session = getActiveSession();
+        if (session) {
+            session.history.push({role, content: content.slice(0, 500)});
+            session.history = session.history.slice(-20);
+            saveSessions();
+        }
+    }
+
+    function clearChatHistory() {
+        const session = getActiveSession();
+        if (session) {
+            session.history = [];
+            saveSessions();
+        }
+    }
+
+    // ── Legacy compat (chatHistory → getChatHistory) ──────────
     let chatHistory = [];
 
     function loadChatHistory() {
-        try {
-            const stored = localStorage.getItem(CHAT_STORAGE_KEY);
-            if (stored) {
-                chatHistory = JSON.parse(stored);
-                const container = document.getElementById('chatMessages');
-                container.innerHTML = '';
-                for (const msg of chatHistory) {
-                    const div = document.createElement('div');
-                    div.className = `chat-msg ${msg.role === 'user' ? 'user' : 'bot'}`;
-                    div.innerHTML = `<div class="bubble">${escapeHtml(msg.content)}</div>`;
-                    container.appendChild(div);
-                }
-                container.scrollTop = container.scrollHeight;
-                return;
-            }
-        } catch(e) { console.error('Load chat error:', e); }
-        // No history — show welcome
-        addBotMessage('Halo! Aku Trazezzo AI. Tanya apapun tentang servermu.<br><br><span style="font-size:0.78rem; color: var(--text-muted);">Mode <b>Calm</b>: tanya jawab read-only. <b>Aggressive</b>: agent bisa action dengan persetujuan.</span>');
+        loadSessions();
     }
 
     function saveChatHistory() {
-        try {
-            // Keep max 50 messages to avoid localStorage overflow
-            const toSave = chatHistory.slice(-50);
-            localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toSave));
-        } catch(e) { console.error('Save chat error:', e); }
+        saveSessions();
     }
 
     function escapeHtml(text) {
@@ -1029,10 +1184,9 @@
     });
 
     async function clearChat() {
-        const confirmed = await showConfirm('Hapus seluruh chat history?', {icon: 'warning', title: 'Clear Chat', confirmText: 'Hapus', danger: true});
+        const confirmed = await showConfirm('Hapus chat history session ini?', {icon: 'warning', title: 'Clear Session', confirmText: 'Hapus', danger: true});
         if (!confirmed) return;
-        chatHistory = [];
-        localStorage.removeItem(CHAT_STORAGE_KEY);
+        clearChatHistory();
         document.getElementById('chatMessages').innerHTML = '';
         removeImage();
         // Also clear agent activity panel
@@ -1057,7 +1211,9 @@
             userDisplay += `<br><img src="${currentImage}" style="max-width:200px;max-height:150px;border-radius:6px;margin-top:6px;">`;
         }
         addMessage(userDisplay, 'user');
+        chatHistory = getChatHistory();
         chatHistory.push({role: 'user', content: msg || '(image)'});
+        pushChatHistory('user', msg || '(image)');
 
         const botDiv = addMessage('', 'bot');
         const bubble = botDiv.querySelector('.bubble');
@@ -1083,7 +1239,7 @@
                 const resp = await fetch('/trazezzo/api/chat', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({message: msg, mode: 'agent', image: imageData, history: chatHistory.slice(-10), scope: chatScope}),
+                    body: JSON.stringify({message: msg, mode: 'agent', image: imageData, history: getChatHistory().slice(-10), scope: chatScope}),
                 });
                 const reader = resp.body.getReader();
                 const decoder = new TextDecoder();
@@ -1146,6 +1302,7 @@
                 }
                 if (!summaryText) summaryText = '(Agent selesai. Lihat detail di panel Agent Activity.)';
                 chatHistory.push({role: 'assistant', content: summaryText.replace(/<[^>]*>/g, '').slice(0, 500)});
+                pushChatHistory('assistant', summaryText.replace(/<[^>]*>/g, '').slice(0, 500));
                 saveChatHistory();
             } else {
                 // Reasoning mode: streaming text
@@ -1183,6 +1340,7 @@
                     }
                 }
                 chatHistory.push({role: 'assistant', content: fullText});
+                pushChatHistory('assistant', fullText);
                 saveChatHistory();
             }
         } catch(e) {

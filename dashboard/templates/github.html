@@ -1,61 +1,47 @@
 {% extends "base.html" %}
-{% block title %}Trazezzo — GitHub{% endblock %}
+{% block title %}Trazezzo — App Inventory{% endblock %}
 {% block content %}
 <div class="page-header">
- <h2>GitHub</h2>
- <div class="desc">Manage connected repos and view domain mappings</div>
+ <h2>App Inventory</h2>
+ <div class="desc">Auto-detected applications — link repos, add descriptions, chat per app</div>
 </div>
 
 <div class="card">
  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-  <div class="card-title" style="margin: 0;">Connected Repos</div>
-  <button class="btn btn-sm" onclick="loadTrackedRepos()">Refresh</button>
- </div>
-
- <div id="tokenRow" style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
+  <div class="card-title" style="margin: 0;">GitHub Token</div>
   {% if has_token %}
    {% if user and not user.error %}
    <div style="display: flex; align-items: center; gap: 10px;">
-    <img src="{{ user.avatar_url }}" alt="" style="width: 32px; height: 32px; border-radius: 50%;">
-    <div style="flex: 1;">
-     <div style="font-weight: 600; font-size: 0.85rem;">{{ user.login }}</div>
-     <div style="font-size: 0.72rem; color: var(--text-muted);">{{ user.public_repos }} repos</div>
-    </div>
+    <img src="{{ user.avatar_url }}" alt="" style="width: 28px; height: 28px; border-radius: 50%;">
+    <span style="font-size: 0.82rem;">{{ user.login }}</span>
     <button class="btn btn-sm" style="color: var(--error);" onclick="deleteToken()">Disconnect</button>
    </div>
    {% else %}
-   <div style="display: flex; align-items: center; gap: 10px;">
+   <div style="display: flex; align-items: center; gap: 8px;">
     <span style="color: var(--success); font-size: 0.82rem;">✓ Token configured</span>
     <button class="btn btn-sm" style="color: var(--error);" onclick="deleteToken()">Disconnect</button>
    </div>
    {% endif %}
   {% else %}
    <div style="display: flex; gap: 8px; align-items: center;">
-    <input type="password" id="tokenInput" placeholder="GitHub PAT (ghp_... or github_pat_...)" style="flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-mono); font-size: 0.82rem;">
+    <input type="password" id="tokenInput" placeholder="GitHub PAT" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-mono); font-size: 0.78rem; width: 200px;">
     <button class="btn btn-sm btn-primary" onclick="saveToken()">Connect</button>
-   </div>
-   <div style="margin-top: 8px; font-size: 0.72rem; color: var(--text-muted);">
-    GitHub → Settings → Developer settings → Fine-grained PAT → scopes: Contents (R/W), Pull requests (W), Metadata (R)
    </div>
   {% endif %}
  </div>
-
- <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-  <input type="text" id="repoOwnerInput" placeholder="owner (e.g. yusufworkmail456-sys)" style="flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-mono); font-size: 0.82rem;">
-  <input type="text" id="repoNameInput" placeholder="repo name" style="flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-mono); font-size: 0.82rem;">
-  <button class="btn btn-sm btn-primary" onclick="addTrackedRepo()">+ Add Repo</button>
- </div>
-
- <div id="trackedReposList" style="overflow-x: auto;"></div>
 </div>
 
 <div class="card">
  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-  <div class="card-title" style="margin: 0;">Domain &amp; App Inventory</div>
-  <button class="btn btn-sm" onclick="loadDomains()">Refresh</button>
+  <div class="card-title" style="margin: 0;">Applications</div>
+  <div style="display: flex; gap: 8px;">
+   <input type="text" id="repoOwnerInput" placeholder="owner" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-mono); font-size: 0.78rem; width: 120px;">
+   <input type="text" id="repoNameInput" placeholder="repo" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-mono); font-size: 0.78rem; width: 120px;">
+   <button class="btn btn-sm btn-primary" onclick="addTrackedRepo()">+ Track Repo</button>
+   <button class="btn btn-sm" onclick="loadAppInventory()">Refresh</button>
+  </div>
  </div>
- <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px;">Auto-detected from nginx configs, systemd services, and git remotes.</div>
- <div id="domainInventory" style="overflow-x: auto;"></div>
+ <div id="appInventory" style="overflow-x: auto;">Loading...</div>
 </div>
 {% endblock %}
 
@@ -64,77 +50,112 @@
 async function saveToken() {
  const token = document.getElementById('tokenInput').value.trim();
  if (!token) { alert('Token cannot be empty', 'warning'); return; }
- const resp = await fetch('/trazezzo/api/github/token', {
-  method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({token}),
- });
+ const resp = await fetch('/trazezzo/api/github/token', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({token}) });
  const data = await resp.json();
  if (data.success) { location.reload(); } else { alert('Error: ' + (data.error || 'Failed'), 'error'); }
 }
 
 async function deleteToken() {
- const confirmed = await showConfirm('Disconnect GitHub? Token will be deleted.', {icon: 'warning', title: 'Disconnect GitHub', confirmText: 'Disconnect', danger: true});
+ const confirmed = await showConfirm('Disconnect GitHub?', {icon: 'warning', title: 'Disconnect', danger: true});
  if (!confirmed) return;
  await fetch('/trazezzo/api/github/token', { method: 'DELETE' });
  location.reload();
 }
 
-async function loadTrackedRepos() {
- const container = document.getElementById('trackedReposList');
- if (!container) return;
- try {
-  const resp = await fetch('/trazezzo/api/github/tracked');
-  const data = await resp.json();
-  if (!data.repos || data.count === 0) {
-   container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.82rem; padding: 12px; text-align: center;">No repos connected. Add one above.</div>';
-   return;
-  }
-  let html = '<table style="width: 100%; font-size: 0.82rem;"><thead><tr><th style="text-align: left; padding: 6px 8px;">Repository</th><th style="text-align: left; padding: 6px 8px;">Branch</th><th style="text-align: left; padding: 6px 8px;">Language</th><th style="text-align: center; padding: 6px 8px;"></th></tr></thead><tbody>';
-  for (const r of data.repos) {
-   const info = r.info || {};
-   const fullName = r.full_name || r.owner + '/' + r.repo;
-   const url = info.html_url || 'https://github.com/' + fullName;
-   const privateBadge = info.private ? ' <span class="badge warn" style="font-size: 0.65rem;">private</span>' : '';
-   html += '<tr style="border-bottom: 1px solid var(--border);">' +
-    '<td style="padding: 6px 8px;"><a href="' + url + '" target="_blank" style="text-decoration: none; color: var(--primary);"><strong>' + fullName + '</strong></a>' + privateBadge + '</td>' +
-    '<td style="padding: 6px 8px; font-family: var(--font-mono);">' + (info.default_branch || '—') + '</td>' +
-    '<td style="padding: 6px 8px;">' + (info.language || '—') + '</td>' +
-    '<td style="padding: 6px 8px; text-align: center;"><button class="btn btn-sm" style="color: var(--error); padding: 2px 10px;" onclick="removeTrackedRepo(\'' + r.owner + '\', \'' + r.repo + '\')">Remove</button></td>' +
-    '</tr>';
-  }
-  html += '</tbody></table>';
-  container.innerHTML = html;
- } catch(e) {
-  container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.82rem; padding: 12px;">Failed to load repos.</div>';
- }
-}
-
 async function addTrackedRepo() {
  const owner = document.getElementById('repoOwnerInput').value.trim();
  const repo = document.getElementById('repoNameInput').value.trim();
- if (!owner || !repo) { alert('Both owner and repo name are required', 'warning'); return; }
- const resp = await fetch('/trazezzo/api/github/tracked/add', {
-  method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({owner, repo}),
- });
+ if (!owner || !repo) { alert('Owner and repo required', 'warning'); return; }
+ const resp = await fetch('/trazezzo/api/github/tracked/add', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({owner, repo}) });
  const data = await resp.json();
  if (data.success) {
   document.getElementById('repoOwnerInput').value = '';
   document.getElementById('repoNameInput').value = '';
-  loadTrackedRepos();
+  loadAppInventory();
   refreshChatScopes();
- } else {
-  alert('Error: ' + (data.error || 'Failed'), 'error');
- }
+ } else { alert('Error: ' + (data.error || 'Failed'), 'error'); }
 }
 
-async function removeTrackedRepo(owner, repo) {
- const confirmed = await showConfirm('Remove ' + owner + '/' + repo + '?', {icon: 'warning', title: 'Remove Repo', confirmText: 'Remove', danger: true});
- if (!confirmed) return;
- const resp = await fetch('/trazezzo/api/github/tracked/remove', {
-  method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({owner, repo}),
+let availableRepos = [];
+async function loadAppInventory() {
+ const container = document.getElementById('appInventory');
+ container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.82rem; padding: 12px;">Detecting apps...</div>';
+ const [appsResp, reposResp] = await Promise.all([
+  fetch('/trazezzo/api/app-inventory'),
+  fetch('/trazezzo/api/app-inventory/repos'),
+ ]);
+ const appsData = await appsResp.json();
+ const reposData = await reposResp.json();
+ availableRepos = reposData.repos || [];
+ if (!appsData.apps || appsData.apps.length === 0) {
+  container.innerHTML = '<div style="color: var(--text-muted); padding: 12px;">No apps detected.</div>';
+  return;
+ }
+ let html = '<table style="width: 100%; font-size: 0.82rem;"><thead><tr>';
+ html += '<th style="text-align: left; padding: 6px 8px;">Domain</th>';
+ html += '<th style="text-align: left; padding: 6px 8px;">Path</th>';
+ html += '<th style="text-align: left; padding: 6px 8px;">Port</th>';
+ html += '<th style="text-align: left; padding: 6px 8px;">Service</th>';
+ html += '<th style="text-align: left; padding: 6px 8px;">Repo</th>';
+ html += '<th style="text-align: left; padding: 6px 8px;">Description</th>';
+ html += '<th style="text-align: center; padding: 6px 8px;">Chat</th>';
+ html += '</tr></thead><tbody>';
+ appsData.apps.forEach(function(app) {
+  var port = app.port || '';
+  var paths = app.paths.join(', ');
+  var svcBadge = app.service_name ? '<span class="badge ' + (app.service_status === 'active' ? 'active' : 'failed') + '">' + app.service_name + '</span>' : '—';
+  var currentRepo = app.manual_repo || app.auto_repo || '';
+  var repoOptions = '<option value="">— none —</option>' + availableRepos.map(function(r) { return '<option value="' + r + '"' + (r === currentRepo ? ' selected' : '') + '>' + r + '</option>'; }).join('');
+  var repoSelect = '<select onchange="saveOverride(' + port + ', this.value)" style="padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.75rem; max-width: 160px;">' + repoOptions + '</select>';
+  var descValue = app.description || '';
+  var descInput = '<input type="text" value="' + descValue.replace(/"/g, '&quot;') + '" placeholder="optional" onchange="saveOverrideDesc(' + port + ', this.value)" style="padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.75rem; width: 100%; max-width: 180px;">';
+  var chatBtn = '<button class="btn btn-sm btn-primary" style="padding: 2px 10px;" onclick="chatWithApp(' + port + ', \'' + (app.domain + paths).replace(/'/g, "\\'") + '\')" title="Chat about this app">💬</button>';
+  var sslBadge = app.ssl && app.ssl.has_ssl ? (app.ssl.expired ? '<span class="badge failed">EXP</span>' : '<span class="badge active">' + app.ssl.days_left + 'd</span>') : '—';
+  html += '<tr style="border-bottom: 1px solid var(--border);">' +
+   '<td style="padding: 6px 8px;"><strong>' + app.domain + '</strong></td>' +
+   '<td style="padding: 6px 8px; font-family: var(--font-mono);">' + paths + '</td>' +
+   '<td style="padding: 6px 8px; font-family: var(--font-mono);">' + (port || '—') + '</td>' +
+   '<td style="padding: 6px 8px;">' + svcBadge + '</td>' +
+   '<td style="padding: 6px 8px;">' + repoSelect + '</td>' +
+   '<td style="padding: 6px 8px;">' + descInput + '</td>' +
+   '<td style="padding: 6px 8px; text-align: center;">' + chatBtn + '</td>' +
+   '</tr>';
  });
- const data = await resp.json();
- if (data.success) { loadTrackedRepos(); refreshChatScopes(); }
- else { alert('Error: ' + (data.error || 'Failed'), 'error'); }
+ html += '</tbody></table>';
+ container.innerHTML = html;
+}
+
+async function saveOverride(port, repo) {
+ await fetch('/trazezzo/api/app-inventory/' + port + '/override', {
+  method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({repo: repo}),
+ });
+}
+
+async function saveOverrideDesc(port, description) {
+ await fetch('/trazezzo/api/app-inventory/' + port + '/override', {
+  method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({description: description}),
+ });
+}
+
+async function chatWithApp(port, label) {
+ // Fetch app context
+ const resp = await fetch('/trazezzo/api/app-inventory/' + port + '/context');
+ const ctx = await resp.json();
+ if (ctx.error) { alert('Cannot get app context: ' + ctx.error, 'error'); return; }
+ // Create new chat session with app context
+ const repo = ctx.repo || '';
+ const scope = repo ? 'repo:' + repo : 'system';
+ const appContext = {
+  title: ctx.service_name || (ctx.domain + ':' + ctx.port),
+  domain: ctx.domain,
+  port: ctx.port,
+  service: ctx.service_name || '',
+  repo: repo,
+  description: ctx.description || '',
+ };
+ newSession(appContext.title.substring(0, 15), scope, appContext);
+ // Navigate to overview so chat is visible
+ window.location.href = '/trazezzo/';
 }
 
 async function refreshChatScopes() {
@@ -155,42 +176,6 @@ async function refreshChatScopes() {
  } catch(e) {}
 }
 
-async function loadDomains() {
- const container = document.getElementById('domainInventory');
- container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.82rem; padding: 12px;">Detecting...</div>';
- const resp = await fetch('/trazezzo/api/domain-inventory');
- const data = await resp.json();
- if (!data.domains || data.domains.length === 0) {
-  container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.82rem; padding: 12px;">No domains detected.</div>';
-  return;
- }
- let html = '<table style="width: 100%; font-size: 0.82rem;"><thead><tr><th style="text-align: left; padding: 6px 8px;">Domain</th><th style="text-align: left; padding: 6px 8px;">Path</th><th style="text-align: left; padding: 6px 8px;">Port</th><th style="text-align: left; padding: 6px 8px;">Service</th><th style="text-align: left; padding: 6px 8px;">Linked Repo</th><th style="text-align: left; padding: 6px 8px;">SSL</th></tr></thead><tbody>';
- data.domains.forEach(function(d) {
-  var ssl = d.ssl && d.ssl.has_ssl
-   ? (d.ssl.expired ? '<span class="badge failed">EXPIRED</span>'
-      : d.ssl.expiring_soon ? '<span class="badge warn">' + d.ssl.days_left + 'd</span>'
-      : '<span class="badge active">' + d.ssl.days_left + 'd</span>')
-   : '—';
-  var svc = d.service_name
-   ? '<span class="badge ' + (d.service_status === 'active' ? 'active' : 'failed') + '">' + d.service_name + '</span>'
-   : '—';
-  var repo = d.repo
-   ? '<a href="https://github.com/' + d.repo + '" target="_blank" style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--primary);">' + d.repo + '</a>'
-   : '<span style="color: var(--text-muted); font-size: 0.72rem;">not linked</span>';
-  html += '<tr style="border-bottom: 1px solid var(--border);">' +
-   '<td style="padding: 6px 8px;"><strong>' + d.domain + '</strong></td>' +
-   '<td style="padding: 6px 8px; font-family: var(--font-mono);">' + d.path + '</td>' +
-   '<td style="padding: 6px 8px; font-family: var(--font-mono);">' + (d.port || '—') + '</td>' +
-   '<td style="padding: 6px 8px;">' + svc + '</td>' +
-   '<td style="padding: 6px 8px;">' + repo + '</td>' +
-   '<td style="padding: 6px 8px;">' + ssl + '</td>' +
-   '</tr>';
- });
- html += '</tbody></table>';
- container.innerHTML = html;
-}
-
-loadTrackedRepos();
-loadDomains();
+loadAppInventory();
 </script>
 {% endblock %}
