@@ -30,7 +30,7 @@
  </thead>
  <tbody id="svcTable">
  {% for svc in services %}
- <tr data-search="{{ svc.unit | lower }} {{ svc.description | lower }}">
+ <tr class="svc-row" data-search="{{ svc.unit | lower }} {{ svc.description | lower }}">
  <td><strong>{{ svc.unit }}</strong></td>
  <td>{{ svc.load }}</td>
  <td><span class="badge {% if svc.active == 'active' %}active{% elif svc.active == 'failed' %}failed{% else %}inactive{% endif %}">{{ svc.active }}</span></td>
@@ -45,8 +45,10 @@
  {% endfor %}
  </tbody>
  </table>
+ <div id="svcPagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 12px;"></div>
 </div>
 
+{% block script %}
 <script>
 function svcAction(unit, action) {
  if (!confirm(`${action} service: ${unit}?`)) return;
@@ -58,11 +60,38 @@ function svcAction(unit, action) {
  })
  .catch(e => alert('Error: ' + e));
 }
-document.getElementById('svcSearch').addEventListener('input', e => {
- const q = e.target.value.toLowerCase();
- document.querySelectorAll('#svcTable tr').forEach(tr => {
- tr.style.display = tr.dataset.search.includes(q) ? '' : 'none';
+
+const SVC_PER_PAGE = 20;
+let svcPage = 1;
+
+function renderSvcPage() {
+ const rows = document.querySelectorAll('.svc-row');
+ const q = document.getElementById('svcSearch').value.toLowerCase();
+ const filtered = Array.from(rows).filter(r => r.dataset.search.includes(q));
+ rows.forEach(r => r.style.display = 'none');
+ const total = filtered.length;
+ const totalPages = Math.ceil(total / SVC_PER_PAGE);
+ if (svcPage > totalPages) svcPage = totalPages;
+ if (svcPage < 1) svcPage = 1;
+ const start = (svcPage - 1) * SVC_PER_PAGE;
+ const end = start + SVC_PER_PAGE;
+ filtered.forEach((row, i) => {
+  row.style.display = (i >= start && i < end) ? '' : 'none';
  });
+ const pag = document.getElementById('svcPagination');
+ if (totalPages <= 1) { pag.innerHTML = ''; return; }
+ let html = '';
+ html += `<button class="btn btn-sm" ${svcPage === 1 ? 'disabled' : ''} onclick="svcPage--; renderSvcPage()">\u2039 Prev</button>`;
+ html += `<span style="font-size: 0.82rem; color: var(--text-muted);">Page ${svcPage} / ${totalPages}</span>`;
+ html += `<button class="btn btn-sm" ${svcPage === totalPages ? 'disabled' : ''} onclick="svcPage++; renderSvcPage()">Next \u203A</button>`;
+ pag.innerHTML = html;
+}
+
+document.getElementById('svcSearch').addEventListener('input', e => {
+ svcPage = 1;
+ renderSvcPage();
 });
+renderSvcPage();
 </script>
+{% endblock %}
 {% endblock %}

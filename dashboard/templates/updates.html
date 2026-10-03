@@ -15,15 +15,16 @@
  {% if updates.updates %}
  <table>
  <thead><tr><th>Package</th><th>Details</th></tr></thead>
- <tbody>
+ <tbody id="updTable">
  {% for u in updates.updates %}
- <tr>
+ <tr class="upd-row">
  <td><strong>{{ u.name }}</strong></td>
  <td style="font-size: 0.8rem; color: var(--text-muted);">{{ u.raw if u.raw else u.version if u.version else '' }}</td>
  </tr>
  {% endfor %}
  </tbody>
  </table>
+ <div id="updPagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 12px;"></div>
  {% else %}
  <div style="color: var(--success); padding: 20px; text-align: center;">System is up to date</div>
  {% endif %}
@@ -58,6 +59,30 @@
 
 {% block script %}
 <script>
+const UPD_PER_PAGE = 20;
+let updPage = 1;
+
+function renderUpdPage() {
+ const rows = document.querySelectorAll('.upd-row');
+ const total = rows.length;
+ const totalPages = Math.ceil(total / UPD_PER_PAGE);
+ if (updPage > totalPages) updPage = totalPages;
+ if (updPage < 1) updPage = 1;
+ const start = (updPage - 1) * UPD_PER_PAGE;
+ const end = start + UPD_PER_PAGE;
+ rows.forEach((row, i) => {
+  row.style.display = (i >= start && i < end) ? '' : 'none';
+ });
+ const pag = document.getElementById('updPagination');
+ if (totalPages <= 1) { pag.innerHTML = ''; return; }
+ let html = '';
+ html += `<button class="btn btn-sm" ${updPage === 1 ? 'disabled' : ''} onclick="updPage--; renderUpdPage()">\u2039 Prev</button>`;
+ html += `<span style="font-size: 0.82rem; color: var(--text-muted);">Page ${updPage} / ${totalPages}</span>`;
+ html += `<button class="btn btn-sm" ${updPage === totalPages ? 'disabled' : ''} onclick="updPage++; renderUpdPage()">Next \u203A</button>`;
+ pag.innerHTML = html;
+}
+renderUpdPage();
+
 function applyUpdates() {
  if (!confirm('Apply all available updates? This may take a few minutes.')) return;
  alert('Updates are being applied in the background. Check logs for progress.');
