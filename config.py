@@ -32,11 +32,13 @@ BATCH_INSERT_MAX_EVENTS = 500
 PROACTIVE_INTERVAL = 30  # seconds between checks
 PROACTIVE_MODE = "calm"  # calm | aggressive
 
-# ── LLM (reuse 9router from KC) ───────────────────────────────────────
-LLM_BASE_URL = "https://9router.amital.co.id/v1"
-LLM_MODEL = "coding"
-LLM_ENV_KEY_NAME = "HERMES_CUSTOM_9ROUTER_AMITAL_CO_ID_API_KEY"
-LLM_ENV_PATH = "/root/.hermes/.env"
+# ── LLM Configuration ─────────────────────────────────────────────────
+# Trazezzo uses any OpenAI-compatible API. Edit these values to match your provider.
+# See docs: https://your-domain/trazezzo-landing/docs.html#ai-setup
+LLM_BASE_URL     = "https://9router.com/v1"
+LLM_MODEL        = "coding"
+LLM_ENV_KEY_NAME = "NINEROUTER_API_KEY"
+LLM_ENV_PATH     = "/etc/trazezzo/.env"
 
 # ── Capture sources ───────────────────────────────────────────────────
 CAPTURE_JOURNALD = True
