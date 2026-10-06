@@ -20,9 +20,40 @@ DASHBOARD_HOST = "127.0.0.1"
 DASHBOARD_PORT = 9122
 
 # ── Auth ────────────────────────────────────────────────────────────────
+# No default password ships with the code. Set TRAZEZZO_AUTH_PASSWORD in your
+# service environment, or on first start a random password is generated and
+# written to DATA_DIR/initial_admin_password.txt (chmod 600).
+import secrets
+
 AUTH_USERNAME = os.environ.get("TRAZEZZO_AUTH_USERNAME", "admin")
-AUTH_PASSWORD = os.environ.get("TRAZEZZO_AUTH_PASSWORD", "trazezzo")
-SESSION_SECRET = os.environ.get("TRAZEZZO_SESSION_SECRET", "trazezzo-session-secret-change-me")
+
+_password_env = os.environ.get("TRAZEZZO_AUTH_PASSWORD", "").strip()
+if _password_env:
+    AUTH_PASSWORD = _password_env
+else:
+    _pw_file = DATA_DIR / "initial_admin_password.txt"
+    if _pw_file.exists():
+        AUTH_PASSWORD = _pw_file.read_text().strip()
+    else:
+        AUTH_PASSWORD = secrets.token_urlsafe(12)
+        _pw_file.write_text(AUTH_PASSWORD)
+        os.chmod(_pw_file, 0o600)
+        print(f"[trazezzo] No TRAZEZZO_AUTH_PASSWORD set — generated an initial admin "
+              f"password for user '{AUTH_USERNAME}'. Read it from: {_pw_file}")
+
+# Session signing secret: env var, or generated once and persisted so logins
+# survive service restarts.
+_secret_env = os.environ.get("TRAZEZZO_SESSION_SECRET", "").strip()
+if _secret_env:
+    SESSION_SECRET = _secret_env
+else:
+    _sec_file = DATA_DIR / "session_secret"
+    if _sec_file.exists():
+        SESSION_SECRET = _sec_file.read_text().strip()
+    else:
+        SESSION_SECRET = secrets.token_urlsafe(32)
+        _sec_file.write_text(SESSION_SECRET)
+        os.chmod(_sec_file, 0o600)
 
 # ── Retention ──────────────────────────────────────────────────────────
 WARM_RETENTION_DAYS = 7

@@ -46,7 +46,7 @@ mkdir -p /var/lib/trazezzo
 python -m trazezzo.daemon_entry
 ```
 
-Dashboard: http://localhost:9122 — default login `admin` / `trazezzo` (**change it in production**, see below).
+Dashboard: http://localhost:9122 — on first start Trazezzo generates a random admin password and writes it to `/var/lib/trazezzo/initial_admin_password.txt` (mode 600). Read it, log in, then set your own credentials via `TRAZEZZO_AUTH_USERNAME` / `TRAZEZZO_AUTH_PASSWORD` environment variables.
 
 ### CLI shortcut
 
@@ -87,9 +87,9 @@ All settings live in `trazezzo/config.py`; environment variables override defaul
 | `DASHBOARD_HOST` | — | `127.0.0.1` | Bind address (keep localhost, front with nginx) |
 | `DASHBOARD_PORT` | — | `9122` | Dashboard port |
 | `DATA_DIR` | `TRAZEZZO_DATA_DIR` | `/var/lib/trazezzo` | Event DB + state |
-| `AUTH_USERNAME` | `TRAZEZZO_AUTH_USERNAME` | `admin` | Dashboard login |
-| `AUTH_PASSWORD` | `TRAZEZZO_AUTH_PASSWORD` | `trazezzo` | **Change in production!** |
-| `SESSION_SECRET` | `TRAZEZZO_SESSION_SECRET` | auto | Set for sessions that survive restarts |
+| `AUTH_USERNAME` | `TRAZEZZO_AUTH_USERNAME` | `admin` | Dashboard login username |
+| `AUTH_PASSWORD` | `TRAZEZZO_AUTH_PASSWORD` | random | No default password ships with the code — unset = random generated at first start, saved to `DATA_DIR/initial_admin_password.txt` (600) |
+| `SESSION_SECRET` | `TRAZEZZO_SESSION_SECRET` | auto (persisted) | Session signing key; auto-generated once and stored in `DATA_DIR/session_secret` so logins survive restarts |
 | `WARM_RETENTION_DAYS` | — | `7` | Event retention in the SQLite warm store |
 | `PROACTIVE_INTERVAL` | — | `30` | Proactive check interval (s) |
 | `PROACTIVE_MODE` | — | `calm` | `calm` or `aggressive` |
@@ -138,7 +138,7 @@ Restart=on-failure
 RestartSec=5
 Environment=TRAZEZZO_DATA_DIR=/var/lib/trazezzo
 Environment=PYTHONUNBUFFERED=1
-# Production credentials:
+# Production credentials (recommended — set your own):
 # Environment=TRAZEZZO_AUTH_USERNAME=you
 # Environment=TRAZEZZO_AUTH_PASSWORD=strong-password
 # Environment=TRAZEZZO_SESSION_SECRET=random-long-string
