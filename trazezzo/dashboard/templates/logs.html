@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo — Logs{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>Journal Logs</h2>
+ <div class="desc">Live system journal stream — entries appear in real time</div>
+</div>
+
+<div class="card">
+ <div style="display: flex; gap: 12px; margin-bottom: 12px; align-items: center;">
+ <input type="text" id="logSearch" placeholder="Filter logs..." style="flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+ <select id="logPriority" style="padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+ <option value="">All priorities</option>
+ <option value="emerg">Emergency</option>
+ <option value="err">Error</option>
+ <option value="warning">Warning</option>
+ <option value="info">Info</option>
+ </select>
+ <button class="btn btn-primary" id="pauseBtn" onclick="togglePause()">Pause</button>
+ <button class="btn" onclick="clearLogs()">Clear</button>
+ <span id="logStatus" style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+  <span id="liveDot" style="width: 8px; height: 8px; border-radius: 50%; background: var(--success); display: inline-block;"></span>
+  <span id="logCount">0 lines</span>
+ </span>
+ </div>
+ <div id="logContainer" style="background: #0f172a; color: #e2e8f0; padding: 16px; border-radius: 8px; font-family: var(--font-mono); font-size: 0.8rem; max-height: 70vh; overflow-y: auto;">
+ {% for log in logs %}
+ <div class="line">{{ log.line }}</div>
+ {% endfor %}
+ </div>
+</div>
+
+<script>
+const logContainer = document.getElementById('logContainer');
+const logSearch = document.getElementById('logSearch');
+const logPriority = document.getElementById('logPriority');
+const logCount = document.getElementById('logCount');
+const liveDot = document.getElementById('liveDot');
+const MAX_LINES = 1000;
+
+let paused = false;
+let pendingLines = [];
+let lineCount = logContainer.querySelectorAll('.line').length;
+
+function togglePause() {
+ paused = !paused;
+ document.getElementById('pauseBtn').textContent = paused ? 'Resume' : 'Pause';
+ document.getElementById('pauseBtn').classList.toggle('btn-primary', !paused);
+ if (!paused) flushPending();
+}
+
+function clearLogs() {
+ logContainer.innerHTML = '';
+ lineCount = 0;
+ updateCount();
+}
+
+function updateCount() {
+ logCount.textContent = lineCount + ' lines';
+}
+
+function matchesFilter(lineText) {
+ const q = logSearch.value.toLowerCase();
+ if (q && !lineText.toLowerCase().includes(q)) return false;
+ const prio = logPriority.value;
+ if (prio) {
+  // Journal short-iso lines do not embed priority; approximate by severity keywords
+  const map = {
+   emerg: /emerg|panic|fatal/i, err: /fail|error/i,
+   warning: /warn/i, info: /info|notice/i,
+  };
+  const re = map[prio];
+  if (re && !re.test(lineText)) return false;
+ }
+ return true;
+}
+
+function applyLine(lineText) {
+ const div = document.createElement('div');
+ div.className = 'line';
+ div.textContent = lineText;
+ if (!matchesFilter(lineText)) div.style.display = 'none';
+ logContainer.appendChild(div);
+ lineCount++;
+ while (logContainer.children.length > MAX_LINES) logContainer.firstChild.remove();
+}
+
+function flushPending() {
+ if (!pendingLines.length) return;
+ const atBottom = logContainer.scrollTop + logContainer.clientHeight >= logContainer.scrollHeight - 40;
+ for (const l of pendingLines) applyLine(l);
+ pendingLines = [];
+ updateCount();
+ if (atBottom) logContainer.scrollTop = logContainer.scrollHeight;
+}
+
+// ── Initial load: recent journal entries ─────────────
+function refreshLogs() {
+ const priority = logPriority.value;
+ fetch(`/trazezzo/api/logs?lines=200${priority ? '&priority=' + priority : ''}`)
+ .then(r => r.json())
+ .then(data => {
+  logContainer.innerHTML = '';
+  lineCount = 0;
+  for (const l of data.logs) applyLine(l.line);
+  updateCount();
+  logContainer.scrollTop = logContainer.scrollHeight;
+ });
+}
+
+// ── Live stream over the shared events WebSocket ─────
+let logWs = null;
+let logWsRetry = 0;
+
+function connectLogWs() {
+ const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+ logWs = new WebSocket(`${proto}://${location.host}/trazezzo/ws/events`);
+ logWs.onmessage = (event) => {
+  try {
+   const data = JSON.parse(event.data);
+   if (data.channel !== 'logs' || !data.line) return;
+   liveDot.style.background = 'var(--success)';
+   if (paused) {
+    pendingLines.push(data.line);
+   } else {
+    const atBottom = logContainer.scrollTop + logContainer.clientHeight >= logContainer.scrollHeight - 40;
+    applyLine(data.line);
+    updateCount();
+    if (atBottom) logContainer.scrollTop = logContainer.scrollHeight;
+   }
+  } catch (e) {}
+ };
+ logWs.onclose = () => {
+  liveDot.style.background = 'var(--error)';
+  const delay = Math.min(1000 * Math.pow(2, logWsRetry++), 15000);
+  setTimeout(connectLogWs, delay);
+ };
+ logWs.onopen = () => { logWsRetry = 0; };
+}
+
+logSearch.addEventListener('input', () => {
+ const q = logSearch.value.toLowerCase();
+ document.querySelectorAll('#logContainer .line').forEach(line => {
+  line.style.display = line.textContent.toLowerCase().includes(q) ? '' : 'none';
+ });
+});
+logPriority.addEventListener('change', refreshLogs);
+
+connectLogWs();
+updateCount();
+logContainer.scrollTop = logContainer.scrollHeight;
+</script>
+{% endblock %}

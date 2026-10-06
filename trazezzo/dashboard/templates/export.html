@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo — Export Events{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>Export Events</h2>
+ <div class="desc">Download captured events for a date range as a gzipped JSON archive. Warm store holds {{ retention_days }} days of data.</div>
+</div>
+
+<div class="card" style="max-width: 640px;">
+ <div class="card-title">Export Range</div>
+ <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 14px;">
+  <label style="font-size: 0.85rem; color: var(--text-muted);">From</label>
+  <input type="date" id="exportSince" value="" style="padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem;">
+  <label style="font-size: 0.85rem; color: var(--text-muted);">To</label>
+  <input type="date" id="exportUntil" value="{{ today }}" style="padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem;">
+ </div>
+ <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+  <button class="btn btn-sm" onclick="setPreset(1)">Last 24h</button>
+  <button class="btn btn-sm" onclick="setPreset(7)">Last 7 days</button>
+  <button class="btn btn-sm" onclick="setPreset(30)">Last 30 days</button>
+ </div>
+ <button class="btn btn-primary" id="exportBtn" onclick="doExport()">Download Export (.json.gz)</button>
+ <div id="exportStatus" style="margin-top: 12px; font-size: 0.85rem; color: var(--text-muted);"></div>
+</div>
+
+<div class="card" style="max-width: 640px;">
+ <div class="card-title">Warm Store</div>
+ <table>
+  <tr><td>Total events</td><td>{{ total_events }}</td></tr>
+  <tr><td>Retention</td><td>{{ retention_days }} days</td></tr>
+  <tr><td>Format</td><td style="font-family: var(--font-mono); font-size: 0.8rem;">JSON, gzip-compressed</td></tr>
+ </table>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+function isoDate(d) { return d.toISOString().slice(0, 10); }
+
+function setPreset(days) {
+ const until = new Date();
+ const since = new Date(until.getTime() - days * 86400000);
+ document.getElementById('exportSince').value = isoDate(since);
+ document.getElementById('exportUntil').value = isoDate(until);
+}
+
+setPreset(1);
+
+async function doExport() {
+ const since = document.getElementById('exportSince').value;
+ const until = document.getElementById('exportUntil').value;
+ const status = document.getElementById('exportStatus');
+ if (!since || !until) { status.textContent = 'Pick both dates first.'; return; }
+
+ const btn = document.getElementById('exportBtn');
+ btn.disabled = true;
+ status.textContent = 'Preparing export... this can take a moment for large ranges.';
+
+ try {
+  const resp = await fetch(`/trazezzo/api/export/events?since=${since}T00:00:00Z&until=${until}T23:59:59Z`);
+  if (!resp.ok) {
+   const err = await resp.json().catch(() => ({}));
+   throw new Error(err.detail || `HTTP ${resp.status}`);
+  }
+  const blob = await resp.blob();
+  const cd = resp.headers.get('Content-Disposition') || '';
+  const m = cd.match(/filename="?([^"]+)"?/);
+  const filename = m ? m[1] : 'trazezzo-events.json.gz';
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+  status.textContent = `Downloaded ${filename} (${(blob.size / 1e6).toFixed(2)} MB).`;
+ } catch (e) {
+  status.textContent = 'Export failed: ' + e.message;
+ } finally {
+  btn.disabled = false;
+ }
+}
+</script>
+{% endblock %}

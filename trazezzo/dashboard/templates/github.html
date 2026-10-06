@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo — App Inventory{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>App Inventory</h2>
+ <div class="desc">Auto-detected applications — link repos, add descriptions, chat per app</div>
+</div>
+
+<div class="card">
+ <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+  <div class="card-title" style="margin: 0;">GitHub Token</div>
+  {% if has_token %}
+   {% if user and not user.error %}
+   <div style="display: flex; align-items: center; gap: 10px;">
+    <img src="{{ user.avatar_url }}" alt="" style="width: 28px; height: 28px; border-radius: 50%;">
+    <span style="font-size: 0.82rem;">{{ user.login }}</span>
+    <button class="btn btn-sm" style="color: var(--error);" onclick="deleteToken()">Disconnect</button>
+   </div>
+   {% else %}
+   <div style="display: flex; align-items: center; gap: 8px;">
+    <span style="color: var(--success); font-size: 0.82rem;">✓ Token configured</span>
+    <button class="btn btn-sm" style="color: var(--error);" onclick="deleteToken()">Disconnect</button>
+   </div>
+   {% endif %}
+  {% else %}
+   <div style="display: flex; gap: 8px; align-items: center;">
+    <input type="password" id="tokenInput" placeholder="GitHub PAT" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-mono); font-size: 0.78rem; width: 200px;">
+    <button class="btn btn-sm btn-primary" onclick="saveToken()">Connect</button>
+   </div>
+  {% endif %}
+ </div>
+</div>
+
+<div class="card">
+ <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+  <div class="card-title" style="margin: 0;">Applications</div>
+  <div style="display: flex; gap: 8px;">
+   <input type="text" id="repoOwnerInput" placeholder="owner" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-mono); font-size: 0.78rem; width: 120px;">
+   <input type="text" id="repoNameInput" placeholder="repo" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-mono); font-size: 0.78rem; width: 120px;">
+   <button class="btn btn-sm btn-primary" onclick="addTrackedRepo()">+ Track Repo</button>
+   <button class="btn btn-sm" onclick="loadAppInventory()">Refresh</button>
+  </div>
+ </div>
+ <div id="appInventory" style="overflow-x: auto;">Loading...</div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+async function saveToken() {
+ const token = document.getElementById('tokenInput').value.trim();
+ if (!token) { alert('Token cannot be empty', 'warning'); return; }
+ const resp = await fetch('/trazezzo/api/github/token', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({token}) });
+ const data = await resp.json();
+ if (data.success) { location.reload(); } else { alert('Error: ' + (data.error || 'Failed'), 'error'); }
+}
+
+async function deleteToken() {
+ const confirmed = await showConfirm('Disconnect GitHub?', {icon: 'warning', title: 'Disconnect', danger: true});
+ if (!confirmed) return;
+ await fetch('/trazezzo/api/github/token', { method: 'DELETE' });
+ location.reload();
+}
+
+async function addTrackedRepo() {
+ const owner = document.getElementById('repoOwnerInput').value.trim();
+ const repo = document.getElementById('repoNameInput').value.trim();
+ if (!owner || !repo) { alert('Owner and repo required', 'warning'); return; }
+ const resp = await fetch('/trazezzo/api/github/tracked/add', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({owner, repo}) });
+ const data = await resp.json();
+ if (data.success) {
+  document.getElementById('repoOwnerInput').value = '';
+  document.getElementById('repoNameInput').value = '';
+  loadAppInventory();
+ } else { alert('Error: ' + (data.error || 'Failed'), 'error'); }
+}
+
+let availableRepos = [];
+async function loadAppInventory() {
+ const container = document.getElementById('appInventory');
+ container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.82rem; padding: 12px;">Detecting apps...</div>';
+ const [appsResp, reposResp] = await Promise.all([
+  fetch('/trazezzo/api/app-inventory'),
+  fetch('/trazezzo/api/app-inventory/repos'),
+ ]);
+ const appsData = await appsResp.json();
+ const reposData = await reposResp.json();
+ availableRepos = reposData.repos || [];
+ if (!appsData.apps || appsData.apps.length === 0) {
+  container.innerHTML = '<div style="color: var(--text-muted); padding: 12px;">No apps detected.</div>';
+  return;
+ }
+ let html = '<table style="width: 100%; font-size: 0.82rem;"><thead><tr>';
+ html += '<th style="text-align: left; padding: 6px 8px;">Domain</th>';
+ html += '<th style="text-align: left; padding: 6px 8px;">Path</th>';
+ html += '<th style="text-align: left; padding: 6px 8px;">Port</th>';
+ html += '<th style="text-align: left; padding: 6px 8px;">Service</th>';
+ html += '<th style="text-align: left; padding: 6px 8px;">Health</th>';
+ html += '<th style="text-align: left; padding: 6px 8px;">Repo</th>';
+ html += '<th style="text-align: left; padding: 6px 8px;">Description</th>';
+ html += '<th style="text-align: center; padding: 6px 8px;">Chat</th>';
+ html += '</tr></thead><tbody>';
+ appsData.apps.forEach(function(app) {
+  var appId = app.app_id || '';
+  var isStatic = app.is_static || false;
+  var port = app.port || '';
+  var paths = app.paths.join(', ');
+  var portDisplay = isStatic ? '<span class="badge inactive" style="font-size:0.65rem;">📁 static</span>' : (port || '—');
+  var svcBadge = isStatic ? '—' : (app.service_name ? '<span class="badge ' + (app.service_status === 'active' ? 'active' : 'failed') + '">' + app.service_name + '</span>' : '—');
+  var h = app.health || null;
+  var healthBadge = '—';
+  if (isStatic) { healthBadge = '<span style="color: var(--text-muted); font-size: 0.72rem;">static</span>'; }
+  else if (h) {
+   var hMap = {
+    up:        ['active', 'UP' + (h.latency_ms ? ' · ' + h.latency_ms + 'ms' : '')],
+    degraded:  ['failed',  'DEGRADED' + (h.status_code ? ' · ' + h.status_code : '')],
+    down:      ['failed',  'DOWN'],
+    no_http_route: ['inactive', 'NO HTTP ROUTE'],
+    unknown:   ['inactive', 'UNKNOWN'],
+   };
+   var hv = hMap[h.status] || ['inactive', h.status.toUpperCase()];
+   var hTitle = h.note ? (' title="' + h.note + '"') : '';
+   healthBadge = '<span class="badge ' + hv[0] + '"' + hTitle + '>' + hv[1] + '</span>';
+  }
+  var currentRepo = app.manual_repo || app.auto_repo || '';
+  var repoOptions = '<option value="">— none —</option>' + availableRepos.map(function(r) { return '<option value="' + r + '"' + (r === currentRepo ? ' selected' : '') + '>' + r + '</option>'; }).join('');
+  var repoSelect = '<select onchange="saveOverride(\'' + appId + '\', this.value)" style="padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.75rem; max-width: 160px;">' + repoOptions + '</select>';
+  var descValue = app.description || '';
+  var descInput = '<input type="text" value="' + descValue.replace(/"/g, '&quot;') + '" placeholder="optional" onchange="saveOverrideDesc(\'' + appId + '\', this.value)" style="padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.75rem; width: 100%; max-width: 180px;">';
+  var chatIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>';
+  var chatBtn = '<button class="btn btn-sm btn-primary" style="padding: 2px 10px; display: flex; align-items: center; justify-content: center;" onclick="chatWithApp(\'' + appId + '\', \'' + (app.domain + paths).replace(/'/g, "\\'") + '\')" title="Chat about this app">' + chatIcon + '</button>';
+  var sslBadge = app.ssl && app.ssl.has_ssl ? (app.ssl.expired ? '<span class="badge failed">EXP</span>' : '<span class="badge active">' + app.ssl.days_left + 'd</span>') : '—';
+  html += '<tr style="border-bottom: 1px solid var(--border);">' +
+   '<td style="padding: 6px 8px;"><strong>' + app.domain + '</strong></td>' +
+   '<td style="padding: 6px 8px; font-family: var(--font-mono);">' + paths + '</td>' +
+   '<td style="padding: 6px 8px; font-family: var(--font-mono);">' + portDisplay + '</td>' +
+   '<td style="padding: 6px 8px;">' + svcBadge + '</td>' +
+   '<td style="padding: 6px 8px;">' + healthBadge + '</td>' +
+   '<td style="padding: 6px 8px;">' + repoSelect + '</td>' +
+   '<td style="padding: 6px 8px;">' + descInput + '</td>' +
+   '<td style="padding: 6px 8px; text-align: center;">' + chatBtn + '</td>' +
+   '</tr>';
+ });
+ html += '</tbody></table>';
+ container.innerHTML = html;
+}
+
+async function saveOverride(appId, repo) {
+ await fetch('/trazezzo/api/app-inventory/' + encodeURIComponent(appId) + '/override', {
+  method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({repo: repo}),
+ });
+}
+
+async function saveOverrideDesc(appId, description) {
+ await fetch('/trazezzo/api/app-inventory/' + encodeURIComponent(appId) + '/override', {
+  method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({description: description}),
+ });
+}
+
+async function chatWithApp(appId, label) {
+ // Fetch app context
+ const resp = await fetch('/trazezzo/api/app-inventory/' + encodeURIComponent(appId) + '/context');
+ const ctx = await resp.json();
+ if (ctx.error) { alert('Cannot get app context: ' + ctx.error, 'error'); return; }
+ // Create new chat session with app context
+ const repo = ctx.repo || '';
+ const scope = repo ? 'repo:' + repo : 'system';
+ const appContext = {
+  title: ctx.service_name || (ctx.is_static ? (ctx.domain + ctx.paths[0]) : (ctx.domain + ':' + ctx.port)),
+  domain: ctx.domain,
+  port: ctx.port,
+  is_static: ctx.is_static || false,
+  static_dir: ctx.static_dir || '',
+  service: ctx.service_name || '',
+  repo: repo,
+  description: ctx.description || '',
+ };
+ newSession(appContext.title.substring(0, 15), scope, appContext);
+ // SPA navigate so chat panel stays sticky (no full reload)
+ const navItem = document.querySelector('.nav-item[href="/trazezzo/"]');
+ if (navItem) { spaNavigate('/trazezzo/', navItem); }
+ else { window.location.href = '/trazezzo/'; }
+}
+
+loadAppInventory();
+</script>
+{% endblock %}

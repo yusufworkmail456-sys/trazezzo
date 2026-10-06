@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo -- Events{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/vis-timeline@7.7.3/styles/vis-timeline-graph2d.min.css">
+<script src="https://unpkg.com/vis-timeline@7.7.3/standalone/umd/vis-timeline-graph2d.min.js"></script>
+<style>
+ #timeline { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+ .vis-item.sev-critical { background: #ef4444; color: white; border-color: #dc2626; }
+ .vis-item.sev-error { background: #f87171; color: white; border-color: #ef4444; }
+ .vis-item.sev-warning { background: #fbbf24; color: #1e293b; border-color: #f59e0b; }
+ .vis-item.sev-info { background: #3b82f6; color: white; border-color: #2563eb; }
+ .vis-item.sev-debug { background: #6b7280; color: white; border-color: #4b5563; }
+ .timeline-controls { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; }
+ .timeline-controls label { font-size: 0.85rem; color: var(--text-muted); }
+ .timeline-controls select, .timeline-controls input { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; }
+ #cy { width: 100%; height: calc(100vh - 220px); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; }
+ .activity-item { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); align-items: center; font-size: 0.82rem; }
+ .activity-item .time { font-family: var(--font-mono); color: var(--text-muted); white-space: nowrap; font-size: 0.76rem; }
+ .activity-item .type { font-family: var(--font-mono); font-size: 0.72rem; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+ .activity-item .type.actor-user { background: rgba(6,162,132,0.15); color: var(--primary); }
+ .activity-item .type.actor-agent { background: rgba(139,92,246,0.15); color: #8b5cf6; }
+ .activity-item .type.actor-system { background: rgba(100,116,139,0.15); color: var(--text-muted); }
+ .activity-item .msg { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>Events</h2>
+ <div class="desc">Black box recorder -- {{ feed.total }} events captured -- {{ feed.counts.user }} user, {{ feed.counts.agent }} agent, {{ feed.counts.system }} system</div>
+</div>
+
+<div class="grid grid-3" style="margin-bottom: 16px;">
+ <div class="card stat">
+  <div class="value" style="color: var(--primary);">{{ feed.counts.user }}</div>
+  <div class="label">User Events</div>
+ </div>
+ <div class="card stat">
+  <div class="value" style="color: #8b5cf6;">{{ feed.counts.agent }}</div>
+  <div class="label">Agent Events</div>
+ </div>
+ <div class="card stat">
+  <div class="value" style="color: var(--text-muted);">{{ feed.counts.system }}</div>
+  <div class="label">System Events</div>
+ </div>
+</div>
+
+<div style="display: flex; gap: 8px; margin-bottom: 16px;">
+ <button class="btn btn-sm btn-primary" id="tabFeed" onclick="switchTab('feed')">Live Feed</button>
+ <button class="btn btn-sm" id="tabTimeline" onclick="switchTab('timeline')">Timeline</button>
+</div>
+
+<!-- TAB: FEED -->
+<div id="tab-feed">
+ <div class="card">
+  <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+   <button class="btn btn-sm btn-primary" data-filter="" onclick="filterActivity('')">All</button>
+   <button class="btn btn-sm" data-filter="user" onclick="filterActivity('user')">User</button>
+   <button class="btn btn-sm" data-filter="agent" onclick="filterActivity('agent')">Agent</button>
+   <button class="btn btn-sm" data-filter="system" onclick="filterActivity('system')">System</button>
+  </div>
+  <div id="activityFeed" style="max-height: 60vh; overflow-y: auto;">
+   {% for ev in feed.events %}
+   <div class="activity-item" data-actor="{{ ev.actor_kind }}">
+    <span class="time">{{ ev.ts | replace('T', ' ') | truncate(19, true, '') }}</span>
+    <span class="type actor-{{ ev.actor_kind }}">{{ ev.type }}</span>
+    <span class="msg">{{ ev.message[:100] }}</span>
+   </div>
+   {% endfor %}
+  </div>
+ </div>
+</div>
+
+<!-- TAB: TIMELINE -->
+<div id="tab-timeline" style="display:none;">
+ <div class="timeline-controls">
+  <label>Window:</label>
+  <select id="windowMinutes" onchange="loadTimeline()">
+   <option value="15">15 min</option>
+   <option value="30" selected>30 min</option>
+   <option value="60">1 hour</option>
+   <option value="180">3 hours</option>
+   <option value="360">6 hours</option>
+   <option value="1440">24 hours</option>
+  </select>
+  <label>Before:</label>
+  <input type="datetime-local" id="beforeTime" onchange="loadTimeline()">
+  <button class="btn btn-primary" onclick="loadTimeline()">Refresh</button>
+  <span id="eventCount" style="margin-left: auto; font-size: 0.85rem; color: var(--text-muted);"></span>
+ </div>
+ <div id="timeline"></div>
+ <div class="card" style="margin-top: 16px;">
+  <div class="card-title">Event Details</div>
+  <div id="eventDetails" style="font-size: 0.85rem; color: var(--text-muted);">Click an event on the timeline to see details.</div>
+ </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+let timeline = null;
+let ws = null;
+
+// ── Tab switching ─────────────────────────────────────
+function switchTab(tab) {
+ ['feed', 'timeline'].forEach(t => {
+  document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
+  const btn = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+  btn.classList.toggle('btn-primary', t === tab);
+ });
+ if (tab === 'timeline' && !timeline) loadTimeline();
+}
+
+// ── Feed: filter + WebSocket ───────────────────────────
+function filterActivity(kind) {
+ document.querySelectorAll('#activityFeed .activity-item').forEach(item => {
+  item.style.display = (!kind || item.dataset.actor === kind) ? '' : 'none';
+ });
+}
+
+ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/trazezzo/ws/events`);
+ws.onmessage = (event) => {
+ const ev = JSON.parse(event.data);
+ const feed = document.getElementById('activityFeed');
+ if (feed && document.getElementById('tab-feed').style.display !== 'none') {
+  const item = document.createElement('div');
+  item.className = 'activity-item';
+  item.dataset.actor = ev.actor_kind;
+  item.innerHTML = `
+   <span class="time">${ev.ts.replace('T', ' ').slice(0, 19)}</span>
+   <span class="type actor-${ev.actor_kind}">${ev.type}</span>
+   <span class="msg">${(ev.message || '').slice(0, 100)}</span>
+  `;
+  feed.prepend(item);
+  while (feed.children.length > 200) feed.lastChild.remove();
+ }
+ if (timeline && document.getElementById('tab-timeline').style.display !== 'none') {
+  const items = timeline.itemsData;
+  if (items) {
+   items.add({
+    id: ev.id || `live_${Date.now()}_${Math.random()}`,
+    start: ev.ts,
+    content: `${ev.type}: ${(ev.message || '').slice(0, 60)}`,
+    group: ev.actor && ev.actor.kind ? ev.actor.kind : 'system',
+    className: `sev-${ev.severity || 'info'}`,
+    title: JSON.stringify(ev.payload || {}, null, 2)
+   });
+  }
+  const countEl = document.getElementById('eventCount');
+  if (countEl) {
+   const current = parseInt(countEl.textContent) || 0;
+   countEl.textContent = `${current + 1} events (live)`;
+  }
+ }
+};
+
+// ── Timeline ──────────────────────────────────────────
+function loadTimeline() {
+ const minutes = document.getElementById('windowMinutes').value;
+ const beforeInput = document.getElementById('beforeTime').value;
+ let url = `/trazezzo/api/causal-timeline?minutes=${minutes}`;
+ if (beforeInput) {
+  const before = new Date(beforeInput).toISOString();
+  url += `&before=${encodeURIComponent(before)}`;
+ }
+ fetch(url)
+ .then(r => r.json())
+ .then(data => {
+  document.getElementById('eventCount').textContent = `${data.metadata.total_events} events in ${data.metadata.window_minutes}min window`;
+  const container = document.getElementById('timeline');
+  const items = new vis.DataSet(data.items);
+  const groups = new vis.DataSet(data.groups);
+  const options = {
+   stack: true, showCurrentTime: true, zoomable: true, moveable: true,
+   margin: { item: 10, axis: 20 },
+   format: {
+    minorLabels: { minute: 'HH:mm', hour: 'HH:mm' },
+    majorLabels: { minute: 'DD MMM HH:mm', hour: 'DD MMM' }
+   }
+  };
+  if (timeline) {
+   timeline.setItems(items);
+   timeline.setGroups(groups);
+   timeline.fit();
+  } else {
+   timeline = new vis.Timeline(container, items, groups, options);
+   timeline.on('select', function(props) {
+    const selected = items.get(props.items[0]);
+    if (selected) {
+     document.getElementById('eventDetails').innerHTML = `
+      <table>
+       <tr><td>Time</td><td>${selected.start}</td></tr>
+       <tr><td>Type</td><td><strong>${selected.content.split(':')[0]}</strong></td></tr>
+       <tr><td>Actor</td><td>${selected.group}</td></tr>
+       <tr><td>Message</td><td>${selected.content}</td></tr>
+       <tr><td>Details</td><td><pre style="white-space: pre-wrap; font-size: 0.8rem;">${selected.title}</pre></td></tr>
+      </table>`;
+    }
+   });
+   timeline.fit();
+  }
+ });
+}
+setInterval(() => { if (ws.readyState !== WebSocket.OPEN) loadTimeline(); }, 60000);
+
+</script>
+{% endblock %}

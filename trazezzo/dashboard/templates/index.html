@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Trazezzo — Overview{% endblock %}
+{% block content %}
+<div class="page-header">
+ <h2>System Overview</h2>
+ <div class="desc">Real-time server status — {{ overview.hostname }}</div>
+</div>
+
+<div class="grid grid-4">
+ <div class="card stat">
+ <div class="value {% if overview.cpu.percent > 80 %}bad{% elif overview.cpu.percent > 50 %}warn{% else %}good{% endif %}">{{ overview.cpu.percent }}%</div>
+ <div class="label">CPU ({{ overview.cpu.count }} cores)</div>
+ </div>
+ <div class="card stat">
+ <div class="value {% if overview.memory.percent > 80 %}bad{% elif overview.memory.percent > 50 %}warn{% else %}good{% endif %}">{{ overview.memory.percent }}%</div>
+ <div class="label">RAM {{ overview.memory.used_gb }}/{{ overview.memory.total_gb }} GB</div>
+ </div>
+ <div class="card stat">
+ <div class="value">{{ overview.load.load1 }}</div>
+ <div class="label">Load (1/5/15m)</div>
+ </div>
+ <div class="card stat">
+ <div class="value good">{{ overview.uptime }}</div>
+ <div class="label">Uptime</div>
+ </div>
+</div>
+
+<div class="grid grid-2" style="margin-top: 16px;">
+ <div class="card">
+ <div class="card-title">Failed Services</div>
+ {% if failed_services %}
+ {% for svc in failed_services %}
+ <div style="padding: 6px 0; color: var(--error);">{{ svc }}</div>
+ {% endfor %}
+ {% else %}
+ <div style="color: var(--success);">No failed services</div>
+ {% endif %}
+ </div>
+ <div class="card">
+  <div class="card-title">Proactive Agent</div>
+  <div style="display: flex; align-items: center; gap: 8px;">
+  <span class="badge {% if proactive_mode == 'aggressive' %}failed{% else %}active{% endif %}" id="proactiveBadge">{{ proactive_mode | upper }}</span>
+  <span style="font-size: 0.85rem; color: var(--text-muted);">Active mode — toggle it from the chat panel →</span>
+  </div>
+ </div>
+</div>
+
+<div class="grid grid-3" style="margin-top: 16px;">
+ <div class="card stat">
+ <div class="value" style="color: var(--primary);">{{ counts.user }}</div>
+ <div class="label">User Activity</div>
+ </div>
+ <div class="card stat">
+ <div class="value" style="color: #8b5cf6;">{{ counts.agent }}</div>
+ <div class="label">Agent Activity</div>
+ </div>
+ <div class="card stat">
+ <div class="value" style="color: var(--text-muted);">{{ counts.system }}</div>
+ <div class="label">System Activity</div>
+ </div>
+</div>
+
+<div class="card" style="margin-top: 16px;">
+ <div class="card-title">System Info</div>
+ <table>
+ <tr><td>Hostname</td><td>{{ overview.hostname }}</td></tr>
+ <tr><td>OS</td><td>{{ overview.os }}</td></tr>
+ <tr><td>Kernel</td><td>{{ overview.kernel }}</td></tr>
+ <tr><td>Boot Time</td><td>{{ overview.boot_time }}</td></tr>
+ </table>
+</div>
+
+<div class="card">
+ <div class="card-title">Disks</div>
+ {% for disk in overview.disks %}
+ <div style="margin-bottom: 12px;">
+ <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+ <span>{{ disk.mountpoint }} ({{ disk.fstype }})</span>
+ <span>{{ disk.used_gb }}/{{ disk.total_gb }} GB ({{ disk.percent }}%)</span>
+ </div>
+ <div class="progress-bar">
+ <div class="progress-fill {% if disk.percent > 80 %}bad{% elif disk.percent > 50 %}warn{% else %}good{% endif %}" style="width: {{ disk.percent }}%"></div>
+ </div>
+ </div>
+ {% endfor %}
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+// Auto-refresh overview stats every 5s
+function refreshOverview() {
+    fetch('/trazezzo/api/overview')
+    .then(r => r.json())
+    .then(data => {
+        if (!data) return;
+
+        // Update CPU
+        const cpuEl = document.querySelector('.grid.grid-4 .card.stat:nth-child(1) .value');
+        if (cpuEl && data.cpu) {
+            cpuEl.textContent = data.cpu.percent + '%';
+            cpuEl.className = 'value ' + (data.cpu.percent > 80 ? 'bad' : data.cpu.percent > 50 ? 'warn' : 'good');
+        }
+
+        // Update RAM
+        const ramEl = document.querySelector('.grid.grid-4 .card.stat:nth-child(2) .value');
+        if (ramEl && data.memory) {
+            ramEl.textContent = data.memory.percent + '%';
+            ramEl.className = 'value ' + (data.memory.percent > 80 ? 'bad' : data.memory.percent > 50 ? 'warn' : 'good');
+        }
+
+        // Update load
+        const loadEl = document.querySelector('.grid.grid-4 .card.stat:nth-child(3) .value');
+        if (loadEl && data.load) {
+            loadEl.textContent = data.load.load1;
+        }
+
+        // Update failed services
+        const failedEl = document.querySelector('.card .card-title');
+        if (failedEl && failedEl.textContent.includes('Failed Services')) {
+            const card = failedEl.parentElement;
+            const existing = card.querySelectorAll('div[style*="padding"]');
+            existing.forEach(e => e.remove());
+            const noFail = card.querySelector('div[style*="success"]');
+            if (noFail) noFail.remove();
+            if (data.failed_services && data.failed_services.length > 0) {
+                data.failed_services.forEach(svc => {
+                    const d = document.createElement('div');
+                    d.style.cssText = 'padding: 6px 0; color: var(--error);';
+                    d.textContent = svc;
+                    card.appendChild(d);
+                });
+            } else {
+                const d = document.createElement('div');
+                d.style.cssText = 'color: var(--success);';
+                d.textContent = 'No failed services';
+                card.appendChild(d);
+            }
+        }
+        // Update Proactive Agent badge
+        fetch('/trazezzo/api/proactive/status')
+        .then(r => r.json())
+        .then(st => {
+            const badge = document.getElementById('proactiveBadge');
+            if (badge && st && st.mode) {
+                badge.textContent = st.mode.toUpperCase();
+                badge.classList.toggle('failed', st.mode === 'aggressive');
+                badge.classList.toggle('active', st.mode !== 'aggressive');
+            }
+        })
+        .catch(() => {});
+    })
+    .catch(() => {});
+}
+setInterval(refreshOverview, 5000);
+</script>
+{% endblock %}
